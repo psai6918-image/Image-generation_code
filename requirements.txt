@@ -1,0 +1,6 @@
+!pip3 uninstall -y transformers diffusers accelerate
+!pip3 install --no-cache-dir transformers==4.40.0 diffusers==0.27.2 accelerate torch
+!pip3 install --upgrade huggingface_hub diffusers transformers
+!pip3 uninstall torch torchvision torchaudio
+!pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+!pip3 install sounddevice scipy transformers soundfile
