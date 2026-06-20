@@ -154,17 +154,25 @@ with gr.Blocks(title="AI Image Studio") as demo:
             processed_preview = gr.Image(label="Processed Edge Map Preview", type="pil", visible=False)
             output_gallery = gr.Gallery(label="Generated Output Images", columns=2, rows=None, object_fit="contain")
 
-    def update_ui(mode_selection):
+   def update_ui(mode_selection):
         if mode_selection == "Text to Image":
-            return gr.update(visible=False), gr.update(visible=False)
-        return gr.update(visible=True), gr.update(visible=True)
+            return (
+                gr.update(visible=False),       # sketch_inputs
+                gr.update(visible=False),       # processed_preview
+                gr.update(interactive=True)     # prompt (Enabled)
+            )
+        else: # Sketch to Image
+            return (
+                gr.update(visible=True),        # sketch_inputs
+                gr.update(visible=True),        # processed_preview
+                gr.update(interactive=False)    # prompt (Disabled)
+            )
 
-    mode.change(fn=update_ui, inputs=mode, outputs=[sketch_inputs, processed_preview])
-
-    generate_btn.click(
-        fn=generate,
-        inputs=[mode, sketch_img, prompt, num_images],
-        outputs=[processed_preview, output_gallery]
+    # Make sure to include 'prompt' in the outputs array
+    mode.change(
+        fn=update_ui, 
+        inputs=mode, 
+        outputs=[sketch_inputs, processed_preview, prompt]
     )
 
 if __name__ == "__main__":
