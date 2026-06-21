@@ -9,3 +9,4 @@ sounddevice
 scipy 
 soundfile
 gradio
+mysql-connector-python
