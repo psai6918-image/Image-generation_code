@@ -15,23 +15,20 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 # --- 1. CONFIGURATION, LOGGING & MODELS ---
 device = "cuda" if torch.cuda.is_available() else "cpu"
-# Using float16 on GPU is critical for a 2x speedup and 50% VRAM reduction
 dtype = torch.float16 if device == "cuda" else torch.float32
 
-OUTPUT_DIR = "outputs"
+OUTPUT_DIR = "fantasy_variants"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 CSV_LOG_FILE = "generation_logs.csv"
 
-# Thread locks to make sure multi-user processing doesn't crash GPU or corrupt CSV file files
 gpu_lock = threading.Lock()
 log_lock = threading.Lock()
 
-# Initialize the CSV file with headers if it doesn't already exist
 if not os.path.exists(CSV_LOG_FILE):
     with open(CSV_LOG_FILE, mode="w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["Timestamp", "Mode", "Prompt", "Num Images Request", "Saved File Names"])
+        writer.writerow(["Timestamp", "Mode", "Base Prompt", "Saved Panorama/Image", "Individual Variants"])
 
 print(f"Loading Models on {device}...")
 BASE_MODEL_ID = "runwayml/stable-diffusion-v1-5"
@@ -48,7 +45,6 @@ pipe_sketch2img = StableDiffusionControlNetPipeline.from_pretrained(
     BASE_MODEL_ID, controlnet=controlnet, torch_dtype=dtype, safety_checker=None
 ).to(device)
 
-# VRAM & SPEED OPTIMIZATION
 if device == "cuda":
     pipe_text2img.enable_model_cpu_offload()
     pipe_sketch2img.enable_model_cpu_offload()
@@ -58,17 +54,21 @@ else:
 
 print("Models Loaded Successfully!")
 
-# --- 2. IMAGE SLIDER DATA & LOGIC ---
-SLIDER_IMAGES = [
-    "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=500",  # Dog 1
-    "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=500",  # Cat 1
-    "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=500",  # Cat 2
-    "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=500",  # Dog 2
+# --- 2. HARDCODED FANTASY STYLES ---
+STYLES = [
+    "cinematic lighting, floating on a cloud island, waterfalls cascading into the sky, highly detailed, 8k resolution, digital art masterpiece",
+    "shimmering aurora borealis sky, iridescent crystal structures, ethereal magical glow, surreal painting, high fantasy, hyper-detailed",
+    "dramatic thunderstorm, jagged crackling lightning, dark epic atmosphere, high contrast, photo-realistic rendering, highly detailed",
+    "golden hour sunset, warm god rays, flying dust particles, majestic mood, volumetric lighting, oil painting style, artstation trending",
+    "mystical star-filled night sky, giant full moon, glowing liquid neon waterfalls, cosmic fantasy concept art, highly intricate",
+    "steampunk style, complex brass gears, winding copper pipes, churning thick steam clouds, copper sunset lighting, highly detailed",
+    "ancient overgrown ruins, glowing emerald moss, dense jungle vines, sun-dappled rainforest canopy, photorealistic nature fantasy",
+    "frozen winter blizzard, floating glacial mountain peaks, clear icicles, cool blue-toned lighting, crisp digital illustration",
+    "surreal desert oasis, dry sand waterfalls, harsh midday sun, blazing horizon, heat haze effect, gritty fantasy style",
+    "cyberpunk magic hybrid, glowing holographic runes, deep purple and cyan neon haze, dark moody atmosphere, futuristic fantasy"
 ]
 
-def rotate_slider(current_index):
-    next_index = (current_index + 1) % len(SLIDER_IMAGES)
-    return SLIDER_IMAGES[next_index], next_index
+NEGATIVE_PROMPT = "ugly, deformed, blurry, modern buildings, cars, low quality, text, watermark, bad anatomy"
 
 # --- 3. IMAGE PROCESSING ---
 def preprocess_sketch(pil_image):
@@ -82,124 +82,158 @@ def preprocess_sketch(pil_image):
     final_np_img = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
     return Image.fromarray(final_np_img).resize((512, 512))
 
-# --- 4. PREDICTION LOGIC ---
-def generate(mode, sketch_img, prompt, num_images, progress=gr.Progress()):
-    if not prompt.strip():
-        raise gr.Error("Please enter a style/content prompt!")
+# --- 4. CORE PREDICTION PIPELINE ---
+def generate(mode, sketch_img, base_prompt, progress=gr.Progress()):
+    if not base_prompt.strip():
+        raise gr.Error("Please enter a style or content prompt!")
 
-    batch_size = int(num_images)
     processed_sketch = None
-
-    # Duplicate the prompt to match our parallel batch size
-    prompts = [prompt] * batch_size
-
-    progress(0, desc="Waiting in queue / Initializing...")
+    session_id = uuid.uuid4().hex[:8]
+    
+    # Format a clean filename root
+    safe_base = "".join(c for c in base_prompt if c.isalnum() or c in (' ', '_', '-')).rstrip()
+    safe_base = safe_base.replace(" ", "_").lower()[:15]
 
     if mode == "Sketch to Image":
         if sketch_img is None:
             raise gr.Error("Please upload or draw a sketch first!")
         processed_sketch = preprocess_sketch(sketch_img)
 
-    # Use the lock to ensure multi-user requests do not crash the VRAM
-    with gpu_lock:
-        progress(0.2, desc="Processing batch on GPU...")
-        if mode == "Sketch to Image":
-            # Parallel execution across the GPU via batch prompts
-            output_images = pipe_sketch2img(
-                prompt=prompts,
-                image=[processed_sketch] * batch_size,
-                controlnet_conditioning_scale=1.0,
-                guidance_scale=7.5,
-                num_inference_steps=20  # Reduced from 30 to 20 for a 33% speedup
-            ).images
-        else:
-            # Parallel execution across the GPU via batch prompts
-            output_images = pipe_text2img(
-                prompt=prompts,
-                guidance_scale=7.5,
-                num_inference_steps=20  # Reduced from 30 to 20 for a 33% speedup
-            ).images
+    # --- MODE 1 & 2: SINGLE IMAGE GENERATION ---
+    if mode in ["Text to Image", "Sketch to Image"]:
+        progress(0.1, desc="Running single image generation pipeline...")
+        with gpu_lock:
+            if mode == "Sketch to Image":
+                image = pipe_sketch2img(
+                    prompt=base_prompt,
+                    negative_prompt=NEGATIVE_PROMPT,
+                    image=processed_sketch,
+                    controlnet_conditioning_scale=1.0,
+                    guidance_scale=7.5,
+                    num_inference_steps=20
+                ).images[0]
+            else:
+                image = pipe_text2img(
+                    prompt=base_prompt,
+                    negative_prompt=NEGATIVE_PROMPT,
+                    guidance_scale=7.5,
+                    num_inference_steps=20
+                ).images[0]
 
-    # Save images locally using unique IDs to prevent users overwriting each other
-    saved_filenames = []
-    for image in output_images:
-        unique_filename = f"generation_{uuid.uuid4().hex}.png"
-        save_path = os.path.join(OUTPUT_DIR, unique_filename)
+        filename = f"{safe_base}_{session_id}_single.png"
+        save_path = os.path.join(OUTPUT_DIR, filename)
         image.save(save_path)
-        saved_filenames.append(unique_filename)
 
-    # Thread-safe appending to the CSV log file
-    with log_lock:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # Format the file list cleanly as a single string field inside the CSV
-        filenames_str = "; ".join(saved_filenames)
-        with open(CSV_LOG_FILE, mode="a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow([timestamp, mode, prompt, batch_size, filenames_str])
+        with log_lock:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(CSV_LOG_FILE, mode="a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow([timestamp, mode, base_prompt, filename, "N/A"])
 
-    preview = processed_sketch if mode == "Sketch to Image" else gr.update(visible=False)
-    return preview, output_images
+        preview = processed_sketch if mode == "Sketch to Image" else gr.update(visible=False)
+        return preview, [image]
 
-# --- 5. DYNAMIC UI GRADIO APP ---
-with gr.Blocks(title="AI Image Studio") as demo:
-    gr.Markdown("# 🎨 AI Image Generation Studio (Batch Mode)")
+    # --- MODE 3: FANTASY IMAGES (10 STYLES PANORAMA LOOP) ---
+    else:
+        generated_images = []
+        saved_filenames = []
+        
+        for idx, style in enumerate(STYLES, start=1):
+            full_prompt = f"{base_prompt}, {style}"
+            progress((idx - 1) / 10, desc=f"Generating Fantasy Variant {idx}/10: {style[:30]}...")
 
+            with gpu_lock:
+                image = pipe_text2img(
+                    prompt=full_prompt,
+                    negative_prompt=NEGATIVE_PROMPT,
+                    guidance_scale=7.5,
+                    num_inference_steps=20
+                ).images[0]
+
+            variant_filename = f"{safe_base}_{session_id}_variant_{idx}.png"
+            variant_path = os.path.join(OUTPUT_DIR, variant_filename)
+            image.save(variant_path)
+            
+            generated_images.append(image)
+            saved_filenames.append(variant_filename)
+            
+            if device == "cuda":
+                torch.cuda.empty_cache()
+
+        # Stitch panorama image layout
+        progress(0.95, desc="Stitching master fantasy panorama...")
+        img_w, img_h = generated_images[0].size
+        side_by_side_grid = Image.new('RGB', (img_w * 10, img_h))
+
+        for idx, img in enumerate(generated_images):
+            side_by_side_grid.paste(img, (idx * img_w, 0))
+
+        panorama_filename = f"{safe_base}_{session_id}_master_panorama.png"
+        panorama_path = os.path.join(OUTPUT_DIR, panorama_filename)
+        side_by_side_grid.save(panorama_path)
+
+        with log_lock:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            variants_str = "; ".join(saved_filenames)
+            with open(CSV_LOG_FILE, mode="a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow([timestamp, mode, base_prompt, panorama_filename, variants_str])
+
+        # Prepend the panorama canvas right into the display gallery
+        output_gallery_list = [side_by_side_grid] + generated_images
+        return gr.update(visible=False), output_gallery_list
+
+# --- 5. GRADIO INTERFACE CONFIGURATION ---
+with gr.Blocks(title="AI Multimode Image Studio") as demo:
+    gr.Markdown("# 🎨 AI Multimode Image Studio")
+
+    # TOP SECTION: Output Display Gallery and Edge Previews (Full width)
     with gr.Row():
         with gr.Column(scale=1):
-            gr.Markdown("### 🐶 Live Inspo Stream 🐱")
-            img_index = gr.State(value=0)
-            slider_display = gr.Image(value=SLIDER_IMAGES[0], label="Slideshow", interactive=False, height=250)
-            slider_timer = gr.Timer(value=3.0, active=True)
+            processed_preview = gr.Image(label="Processed Edge Map Preview (Sketch mode only)", type="pil", visible=False)
+            output_gallery = gr.Gallery(label="Generated Output Images", columns=2, rows=None, object_fit="contain", height=450)
 
-            slider_timer.tick(
-                fn=rotate_slider,
-                inputs=img_index,
-                outputs=[slider_display, img_index],
-                concurrency_limit=None
-            )
-
+    # BOTTOM SECTION: Input elements layered directly underneath the output display
     with gr.Row():
-        with gr.Column() as col:
+        with gr.Column(scale=1):
             mode = gr.Radio(
-                choices=["Sketch to Image", "Text to Image"],
-                value="Text to Image",
-                label="1. Select Mode"
+                choices=["Text to Image", "Sketch to Image", "Fantasy Images"],
+                value="Fantasy Images",
+                label="1. Choose Your Generation Mode"
             )
 
             prompt = gr.Textbox(
-                value="A highly detailed charcoal drawing of a futuristic engine, steam and smoke",
-                label="Prompt",
+                value="A majestic castle sitting on top of a mountain cliffside",
+                label="Core Idea (10 unique environment variations will match this)",
                 lines=3
-            )
-            num_images = gr.Slider(
-                minimum=1, maximum=100, value=1, step=1,
-                label="Number of Images to Generate (Parallel Batch)"
             )
 
             with gr.Group(visible=False) as sketch_inputs:
                 sketch_img = gr.Image(type="pil", label="Upload or Draw Sketch", sources=["upload", "clipboard"])
 
-            generate_btn = gr.Button("Generate Batch", variant="primary")
+            generate_btn = gr.Button("Execute Process Pipeline", variant="primary")
 
-        with gr.Column():
-            processed_preview = gr.Image(label="Processed Edge Map Preview", type="pil", visible=False)
-            output_gallery = gr.Gallery(label="Generated Output Images", columns=2, rows=None, object_fit="contain")
-
+    # Handle component visibility dynamics dynamically switching between modes
     def update_ui(mode_selection):
-        if mode_selection == "Text to Image":
+        if mode_selection == "Sketch to Image":
             return (
-                gr.update(visible=False),       # sketch_inputs
-                gr.update(visible=False),       # processed_preview
-                gr.update(interactive=True)     # prompt (Enabled)
+                gr.update(visible=True),       # sketch_inputs visible
+                gr.update(visible=True),       # processed_preview visible
+                gr.update(label="Prompt (Guide your sketch details)")
             )
-        else: # Sketch to Image
+        elif mode_selection == "Fantasy Images":
             return (
-                gr.update(visible=True),        # sketch_inputs
-                gr.update(visible=True),        # processed_preview
-                gr.update(interactive=False)    # prompt (Disabled)
+                gr.update(visible=False),      # sketch_inputs hidden
+                gr.update(visible=False),      # processed_preview hidden
+                gr.update(label="Core Idea (10 unique environment variations will match this)")
+            )
+        else: # Text to Image
+            return (
+                gr.update(visible=False),      # sketch_inputs hidden
+                gr.update(visible=False),      # processed_preview hidden
+                gr.update(label="Prompt")
             )
 
-    # Added prompt to outputs array to handle the active/disabled logic smoothly
     mode.change(
         fn=update_ui, 
         inputs=mode, 
@@ -208,10 +242,9 @@ with gr.Blocks(title="AI Image Studio") as demo:
 
     generate_btn.click(
         fn=generate,
-        inputs=[mode, sketch_img, prompt, num_images],
+        inputs=[mode, sketch_img, prompt],
         outputs=[processed_preview, output_gallery]
     )
 
 if __name__ == "__main__":
-    # default_concurrency_limit manages simultaneous client worker pipelines
     demo.queue(default_concurrency_limit=4).launch(share=True)
