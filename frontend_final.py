@@ -12,7 +12,7 @@ def load_database():
     else:
         return pd.DataFrame(columns=["Username", "Email", "Password"])
 
-def save_user(username, email, password):
+def save_user(username, email, password, month, day, year):
     """Validates and saves a new user to the Pandas DataFrame."""
     df = load_database()
     
@@ -70,7 +70,7 @@ custom_css = """
 .gradio-container span,
 .gradio-container label,
 .prose {
-    color: #ffffff !important;
+    color: red !important;
 }
 
 /* Custom Navigation Bar */
@@ -92,7 +92,7 @@ custom_css = """
 
 .top-nav span:hover {
     color: #ffffff !important;
-    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+   /* text-shadow: 0 0 10px rgba(255,255,255,0.5); */
 }
 
 /* --- EXTREME GLASS PANELS --- */
@@ -138,6 +138,15 @@ custom_css = """
 .glass-panel input::placeholder {
     color: rgba(255, 255, 255, 0.4) !important;
 }
+
+/* Hide DOB labels no matter how Gradio nests them */
+#dob-month .form > label,
+#dob-day .form > label,
+#dob-year .form > label {
+    display: none !important;
+}
+
+
 """
 
 # --- GRADIO INTERFACE DESIGN ---
@@ -155,31 +164,31 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
     )
     
     # Header / Welcome Section
-    with gr.Row():
-        with gr.Column():
-            gr.Markdown(
-                """
-                # 🚀 Welcome to Our Innovation Platform
-                ### Experience the power of next-generation AI tools built just for you.
-                Discover seamless workflows, fast generation pipelines, and state-of-the-art models all in one workspace.
-                """
-            )
+    # with gr.Row():
+    #     with gr.Column():
+    #         gr.Markdown(
+    #             """
+    #             # 🚀 Welcome to Our Innovation Platform
+    #             ### Experience the power of next-generation AI tools built just for you.
+    #             Discover seamless workflows, fast generation pipelines, and state-of-the-art models all in one workspace.
+    #             """
+    #         )
     
-    gr.HTML("<br>") 
+    # gr.HTML("<br>") 
     
     # Split Layout: Left side info + Images, Right side form
     with gr.Row():
         # Left Column (Content & Square Images wrapped in Glass class)
         with gr.Column(scale=1, elem_classes=["glass-panel"]):
-            gr.Markdown(
-                """
-                ## Why Join Us?
-                * **Instant Access:** Build, test, and deploy with top-tier AI pipelines.
-                * **Cloud-Powered:** Heavy computational lift handled seamlessly.
-                """
-            )
+            # gr.Markdown(
+            #     """
+            #     ## Why Join Us?
+            #     * **Instant Access:** Build, test, and deploy with top-tier AI pipelines.
+            #     * **Cloud-Powered:** Heavy computational lift handled seamlessly.
+            #     """
+            # )
             
-            gr.Markdown("### Features Preview")
+            #gr.Markdown("### Features Preview")
             gr.Gallery(
                 value=images_list,
                 columns=2,          
@@ -190,15 +199,15 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
                 container=False,
                 interactive=False
             )
-            
+          
         # Right Column (Registration Form wrapped in Glass class)
         with gr.Column(scale=1, elem_classes=["glass-panel"]):
             gr.Markdown("## Create Your Free Account")
             
             reg_user = gr.Textbox(label="Username", placeholder="e.g., ai_creator99", max_lines=1)
             reg_email = gr.Textbox(label="Email Address", placeholder="you@example.com", max_lines=1)
-            
-            # Password block with view toggle option
+                               
+           # Password block with view toggle option
             with gr.Group():
                 reg_pass = gr.Textbox(
                     label="Password", 
@@ -207,6 +216,29 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
                     max_lines=1
                 )
                 show_pass_checkbox = gr.Checkbox(label="👁️ Show Password", value=False, container=False)
+                
+            gr.Markdown("## Enter your Date of Birth")
+            # --- Birth Date Carousels ---
+            with gr.Row():
+                birth_month = gr.Dropdown(
+                    label="Month",
+                    choices=["Select Month","January", "February", "March", "April", "May", "June",
+                             "July", "August", "September", "October", "November", "December"],
+                    value= "Select Month",
+                    elem_id="dob-month"
+                    )
+                birth_day = gr.Dropdown(
+                    label="Day",
+                    choices=["Select Day"]+[str(i) for i in range(1, 32)],
+                    value="Select Day",
+                    elem_id="dob-day"
+                    )
+                birth_year = gr.Dropdown(
+                    label="Year",
+                    choices=["Select Year"]+[str(i) for i in range(1920, 2026)],
+                    value="Select Year",
+                    elem_id="dob-year"
+                    )
             
             register_btn = gr.Button("Register Now", variant="primary")
             status_output = gr.Markdown()
@@ -221,7 +253,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
     # --- BUTTON CLICK EVENT ---
     register_btn.click(
         fn=save_user,
-        inputs=[reg_user, reg_email, reg_pass],
+        inputs=[reg_user, reg_email, reg_pass, birth_month, birth_day, birth_year],
         outputs=status_output
     )
 
