@@ -195,7 +195,7 @@ div.tabs > div.tab-nav > button.selected {
 
 /* ============================================================
    FIX FOR THE DARK RED ACCIDENT UTILITY CHECKBOX LABELS
-============================================================ */
+  ============================================================ */
 .pass-toggle-container label,
 .pass-toggle-container span {
     color: #ffffff !important;
@@ -360,4 +360,4 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(share=False, show_api=False)
+    demo.launch(share=False)
