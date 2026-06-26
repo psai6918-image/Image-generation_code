@@ -43,17 +43,17 @@ def login_user(username_or_email, password):
     username_or_email = username_or_email.strip()
     
     if not username_or_email or not password:
-        return "⚠️ Please fill in all fields!"
+        return "⚠️ Please fill in all fields!", False
         
     user_match = df[(df["Username"] == username_or_email) | (df["Email"] == username_or_email)]
     
     if user_match.empty:
-        return "❌ Account not found. Please register first."
+        return "❌ Account not found. Please register first.", False
         
     if str(user_match.iloc[0]["Password"]) == str(password):
-        return f"🔓 Welcome back, {user_match.iloc[0]['Username']}! Login successful."
+        return f"🔓 Welcome back, {user_match.iloc[0]['Username']}! Login successful.", True
     else:
-        return "❌ Incorrect password. Please try again."
+        return "❌ Incorrect password. Please try again.", False
 
 def toggle_password_visibility(show_password):
     """Dynamically changes all password boxes between 'password' and 'text' types."""

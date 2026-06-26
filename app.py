@@ -10,24 +10,47 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
     generated_cache = gr.State([])
 
     # This is the master Tab controller layout
-    with gr.Tabs() as main_tabs:
+    with gr.Tabs(visible=True) as main_tabs:
         
         # TAB 1: Gateway Access (Your frontend UI)
-        with gr.Tab("Gateway Access", id="gateway_tab") as gateway_tab:
+        with gr.Tab("Login", id="gateway_tab") as gateway_tab:
             auth_elements = create_login_ui()
             # Unpack the tuple variables exactly as returned from frontend.py
             login_user_input, login_pass, login_btn, login_status = auth_elements[0:4]
             reg_user, reg_email, reg_pass, reg_repeat_pass = auth_elements[4:8]
             birth_month, birth_day, birth_year, register_btn, register_status = auth_elements[8:13]
             show_pass_checkbox = auth_elements[13]
+            
+        with gr.Tab("About Us") as about_tab:
+            pass
 
         # TAB 2: Protected Workspace (Your image generation UI - starts hidden)
-        with gr.Tab("AI Image Studio", id="studio_tab", visible=False) as studio_tab:
-            studio_elements = create_generator_ui()
-            # Unpack the tuple variables exactly as returned from image_generation.py
-            processed_preview, output_gallery, modify_panel, selected_preview = studio_elements[0:4]
-            modify_input_prompt, strength_control, submit_modification_btn, modification_output = studio_elements[4:8]
-            mode, count_slider, prompt, sketch_inputs, sketch_img, generate_btn, status_message = studio_elements[8:15]
+    with gr.Tab("AI Image Studio", id="studio_tab", visible=False) as studio_tab:
+        studio_elements = create_generator_ui()
+        # Unpack the tuple variables exactly as returned from image_generation.py
+        processed_preview, output_gallery, modify_panel, selected_preview = studio_elements[0:4]
+        modify_input_prompt, strength_control, submit_modification_btn, modification_output = studio_elements[4:8]
+        mode, count_slider, prompt, sketch_inputs, sketch_img, generate_btn, status_message = studio_elements[8:15]
+    
+    def handle_login_navigation(username, password):
+        # Call your simplified true/false logic function inside frontend.py
+        message, is_success = login_user(username, password)
+        
+        if is_success:
+            # Hide the entire public tabs system, reveal the private studio dashboard view
+            return message, gr.update(visible=False), gr.update(visible=True)
+        
+        # If login fails, change absolutely nothing about page display states
+        return message, gr.update(), gr.update()
+
+    # --- ROUTING ACTION MOVEMENT HANDLER ---
+    login_btn.click(
+        fn=handle_login_navigation,
+        inputs=[login_user_input, login_pass],
+        # Completely swaps out the entire visible page context tree instantly
+        outputs=[login_status, main_tabs, studio_tab]
+    )
+
 
     # --- WIRE UP ALL EVENT HANDLERS HERE ---
     show_pass_checkbox.select(fn=toggle_password_visibility, inputs=show_pass_checkbox, outputs=[login_pass, reg_pass, reg_repeat_pass])
