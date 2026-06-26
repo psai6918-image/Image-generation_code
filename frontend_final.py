@@ -86,7 +86,7 @@ images_list = [
 ]
 
 # --- ULTRALIGHT GLASSMORPHISM CUSTOM STYLE INJECTION ---
-custom_css = """
+LOGIN_CSS = """
 /* Core Background Setup */
 .gradio-container {
     background: 
@@ -236,128 +236,136 @@ footer {
 """
 
 # --- GRADIO INTERFACE DESIGN ---
-with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as demo:
+## with gr.Blocks(css=LOGIN_CSS, theme=gr.themes.Soft()) as demo:
+def create_login_ui():
+    with gr.Group() as auth_container:
     
-    # --- TOP NAVIGATION BAR ---
-    gr.HTML(
-        """
-        <div class="top-nav">
-            <span>PRODUCT</span>
-            <span>DEMO</span>
-            <span>PRICING</span>
-        </div>
-        """
-    )
-    
-    # Split Layout Framework
-    with gr.Row():
+        # --- TOP NAVIGATION BAR ---
+        gr.HTML(
+            """
+            <div class="top-nav">
+                <span>PRODUCT</span>
+                <span>DEMO</span>
+                <span>PRICING</span>
+            </div>
+            """
+        )
         
-        # COLUMN 1: Image Grid Gallery Module (Left Side)
-        with gr.Column(scale=1, elem_classes=["glass-panel"]):
-            gr.Gallery(
-                value=images_list,
-                columns=4,          
-                rows=5,             
-                object_fit="cover", 
-                show_label=False,
-                container=True,     
-                interactive=False
-            )
-          
-        # COLUMN 2: High Contrast Authentication Tabs Area (Right Side)
-        with gr.Column(scale=1, elem_classes=["glass-panel", "dark-auth-panel"]):
+        # Split Layout Framework
+        with gr.Row():
             
-            with gr.Tabs() as auth_tabs:
+            # COLUMN 1: Image Grid Gallery Module (Left Side)
+            with gr.Column(scale=1, elem_classes=["glass-panel"]):
+                gr.Gallery(
+                    value=images_list,
+                    columns=4,          
+                    rows=5,             
+                    object_fit="cover", 
+                    show_label=False,
+                    container=True,     
+                    interactive=False
+                )
+            
+            # COLUMN 2: High Contrast Authentication Tabs Area (Right Side)
+            with gr.Column(scale=1, elem_classes=["glass-panel", "dark-auth-panel"]):
                 
-                # TAB 1: Sign In Layout Panel
-                with gr.Tab("Sign In"):
-                    gr.Markdown("<h2>Access Your Account</h2>")
-                    login_user_input = gr.Textbox(label="Username or Email", placeholder="Enter your credentials", max_lines=1)
+                with gr.Tabs() as auth_tabs:
                     
-                    with gr.Group():
-                        login_pass = gr.Textbox(
-                            label="Password", 
-                            placeholder="Enter your security password", 
-                            type="password", 
-                            max_lines=1
-                        )
-                    
-                    login_btn = gr.Button("Sign In", variant="secondary")
-                    login_status = gr.Markdown()
-
-                # TAB 2: Create Account Registration Layout Panel
-                with gr.Tab("Create Account"):
-                    gr.Markdown("<h2>Create Your Free Account</h2>")
-                    reg_user = gr.Textbox(label="Username", placeholder="e.g., ai_creator99", max_lines=1)
-                    reg_email = gr.Textbox(label="Email Address", placeholder="you@example.com", max_lines=1)
-                                       
-                    with gr.Group():
-                        reg_pass = gr.Textbox(
-                            label="Password", 
-                            placeholder="Choose a secure password", 
-                            type="password", 
-                            max_lines=1
-                        )
-                        reg_repeat_pass = gr.Textbox(
-                            label="Repeat Password", 
-                            placeholder="Confirm your password", 
-                            type="password", 
-                            max_lines=1
-                        )
+                    # TAB 1: Sign In Layout Panel
+                    with gr.Tab("Sign In"):
+                        gr.Markdown("<h2>Access Your Account</h2>")
+                        login_user_input = gr.Textbox(label="Username or Email", placeholder="Enter your credentials", max_lines=1)
                         
-                    # --- Birth Date Dropdowns ---
-                    with gr.Row():
-                        birth_month = gr.Dropdown(
-                            choices=["Select Month", "January", "February", "March", "April", "May", "June",
-                                     "July", "August", "September", "October", "November", "December"],
-                            value="Select Month",
-                            show_label=False,
-                            elem_id="dob-month",
-                            elem_classes=["dob-dropdown"]
-                        )
-                        birth_day = gr.Dropdown(
-                            choices=["Select Day"] + [str(i) for i in range(1, 32)],
-                            value="Select Day",
-                            show_label=False,
-                            elem_id="dob-day",
-                            elem_classes=["dob-dropdown"]
-                        )
-                        birth_year = gr.Dropdown(
-                            choices=["Select Year"] + [str(i) for i in range(1920, 2027)],
-                            value="Select Year",
-                            show_label=False,
-                            elem_id="dob-year",
-                            elem_classes=["dob-dropdown"]
-                        )
-                    
-                    register_btn = gr.Button("Register Now", variant="primary")
-                    register_status = gr.Markdown()
-            
-            # Encapsulated container ensuring checkbox labels are targetable for pure white color formatting
-            with gr.Column(elem_classes=["pass-toggle-container"]):
-                gr.HTML("<br>")
-                show_pass_checkbox = gr.Checkbox(label="👁️ Show All Passwords Across Forms", value=False, container=False)
+                        with gr.Group():
+                            login_pass = gr.Textbox(
+                                label="Password", 
+                                placeholder="Enter your security password", 
+                                type="password", 
+                                max_lines=1
+                            )
+                        
+                        login_btn = gr.Button("Sign In", variant="secondary")
+                        login_status = gr.Markdown()
 
-    # --- PASSWORD TOGGLE EVENT HANDLING ---
-    show_pass_checkbox.select(
-        fn=toggle_password_visibility,
-        inputs=show_pass_checkbox,
-        outputs=[login_pass, reg_pass, reg_repeat_pass]
-    )
+                    # TAB 2: Create Account Registration Layout Panel
+                    with gr.Tab("Create Account"):
+                        gr.Markdown("<h2>Create Your Free Account</h2>")
+                        reg_user = gr.Textbox(label="Username", placeholder="e.g., ai_creator99", max_lines=1)
+                        reg_email = gr.Textbox(label="Email Address", placeholder="you@example.com", max_lines=1)
+                                        
+                        with gr.Group():
+                            reg_pass = gr.Textbox(
+                                label="Password", 
+                                placeholder="Choose a secure password", 
+                                type="password", 
+                                max_lines=1
+                            )
+                            reg_repeat_pass = gr.Textbox(
+                                label="Repeat Password", 
+                                placeholder="Confirm your password", 
+                                type="password", 
+                                max_lines=1
+                            )
+                            
+                        # --- Birth Date Dropdowns ---
+                        with gr.Row():
+                            birth_month = gr.Dropdown(
+                                choices=["Select Month", "January", "February", "March", "April", "May", "June",
+                                        "July", "August", "September", "October", "November", "December"],
+                                value="Select Month",
+                                show_label=False,
+                                elem_id="dob-month",
+                                elem_classes=["dob-dropdown"]
+                            )
+                            birth_day = gr.Dropdown(
+                                choices=["Select Day"] + [str(i) for i in range(1, 32)],
+                                value="Select Day",
+                                show_label=False,
+                                elem_id="dob-day",
+                                elem_classes=["dob-dropdown"]
+                            )
+                            birth_year = gr.Dropdown(
+                                choices=["Select Year"] + [str(i) for i in range(1920, 2027)],
+                                value="Select Year",
+                                show_label=False,
+                                elem_id="dob-year",
+                                elem_classes=["dob-dropdown"]
+                            )
+                        
+                        register_btn = gr.Button("Register Now", variant="primary")
+                        register_status = gr.Markdown()
+                
+                # Encapsulated container ensuring checkbox labels are targetable for pure white color formatting
+                with gr.Column(elem_classes=["pass-toggle-container"]):
+                    gr.HTML("<br>")
+                    show_pass_checkbox = gr.Checkbox(label="👁️ Show All Passwords Across Forms", value=False, container=False)
+        return (
+                login_user_input, login_pass, login_btn, login_status,
+                reg_user, reg_email, reg_pass, reg_repeat_pass,
+                birth_month, birth_day, birth_year, register_btn, register_status,
+                show_pass_checkbox
+            )
 
-    # --- SIGN IN ACTION EVENT HANDLING ---
-    login_btn.click(
-        fn=login_user,
-        inputs=[login_user_input, login_pass],
-        outputs=login_status
-    )
+      # -- PASSWORD TOGGLE EVENT HANDLING ---
+        show_pass_checkbox.select(
+            fn=toggle_password_visibility,
+            inputs=show_pass_checkbox,
+            outputs=[login_pass, reg_pass, reg_repeat_pass]
+        )
 
-    # --- REGISTRATION ACTION EVENT HANDLING ---
-    register_btn.click(
-        fn=save_user,
-        inputs=[reg_user, reg_email, reg_pass, reg_repeat_pass, birth_month, birth_day, birth_year],
-        outputs=register_status
-    )
+        # --- SIGN IN ACTION EVENT HANDLING ---
+        login_btn.click(
+            fn=login_user,
+            inputs=[login_user_input, login_pass],
+            outputs=login_status
+        )
 
-if __name__ == "__main__":
-    demo.launch(share=False)
+        # --- REGISTRATION ACTION EVENT HANDLING ---
+        register_btn.click(
+            fn=save_user,
+            inputs=[reg_user, reg_email, reg_pass, reg_repeat_pass, birth_month, birth_day, birth_year],
+            outputs=register_status
+        )
+
+   # if __name__ == "__main__":
+     #   demo.launch(share=False)

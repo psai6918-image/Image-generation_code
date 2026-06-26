@@ -302,7 +302,7 @@ async def modify_selected_image(base_image, modify_prompt, strength_slider, prog
 
 
 # --- 6. GRADIO INTERFACE CONFIGURATION & CUSTOM STYLE RULES ---
-custom_layout_css = """
+GENERATOR_CSS = """
 .gradio-container .selected-image img {
     transform: rotate(90deg) !important;
     transition: transform 0.3s ease-in-out;
@@ -327,101 +327,117 @@ footer, .built-with, .prose a[href*="gradio.app"] {
 }
 """
 
-with gr.Blocks(title="AI Multimode Image Studio", css=custom_layout_css) as demo:
-    generated_cache = gr.State([])
 
-    gr.Markdown("# 🎨 AI Multimode Image Studio")
+def update_ui(mode_selection):
+    """Update UI visibility based on selected mode."""
+    if mode_selection == "Sketch to Image":
+        return (
+            gr.Group(visible=True), 
+            gr.Image(visible=True), 
+            gr.Slider(visible=False),
+            gr.Textbox(label="Prompt (Guide your sketch details)")
+        )
+    elif mode_selection == "Fantasy Images":
+        return (
+            gr.Group(visible=False), 
+            gr.Image(visible=False), 
+            gr.Slider(visible=True),
+            gr.Textbox(label="Core Idea (Unique environmental variations will match this)")
+        )
+    else:
+        return (
+            gr.Group(visible=False), 
+            gr.Image(visible=False), 
+            gr.Slider(visible=False),
+            gr.Textbox(label="Prompt")
+        )
 
-    with gr.Row():
-        with gr.Column(scale=2):
-            processed_preview = gr.Image(label="Processed Edge Map Preview (Sketch mode only)", type="pil", visible=False)
-            output_gallery = gr.Gallery(label="Generated Output Images (Click any photo below to modify it)", columns=4, rows=None, object_fit="contain", height=600)
-        
-        # Modified structure ensures everything stays correctly inside the visibility container panel
-        with gr.Column(scale=1):
-            with gr.Group(visible=False) as modify_panel:
-                gr.Markdown("### 🛠️ Modify Selected Variant")
-                selected_preview = gr.Image(label="Target Image", type="pil", interactive=False)
-                modify_input_prompt = gr.Textbox(
-                    label="What elements or changes would you like to add?", 
-                    placeholder="e.g. add a dog, add a dragon, change to winter snow"
-                )
-                strength_control = gr.Slider(
-                    minimum=0.05, maximum=0.95, value=0.1, step=0.05,
-                    label="Transformation Strength (Higher changes original image structure more)"
-                )
-                submit_modification_btn = gr.Button("Apply Prompt Modifications", variant="secondary")
-                modification_output = gr.Image(label="Modified Variant Result", type="pil")
 
-    with gr.Row():
-        with gr.Column(scale=1):
-            mode = gr.Radio(
-                choices=["Text to Image", "Sketch to Image", "Fantasy Images"],
-                value="Fantasy Images",
-                label="1. Choose Your Generation Mode"
-            )
+# with gr.Blocks(title="AI Multimode Image Studio", css=GENERATOR_CSS) as demo:
+def create_generator_ui():
+    #generated_cache = gr.State([])
+    
+    with gr.Group() as studio_container:
+
+        gr.Markdown("# 🎨 AI Multimode Image Studio")
+
+        with gr.Row():
+            with gr.Column(scale=2):
+                processed_preview = gr.Image(label="Processed Edge Map Preview (Sketch mode only)", type="pil", visible=False)
+                output_gallery = gr.Gallery(label="Generated Output Images (Click any photo below to modify it)", columns=4, rows=None, object_fit="contain", height=600)
             
-            count_slider = gr.Slider(
-                minimum=1, 
-                maximum=100, 
-                value=1, 
-                step=1, 
-                label="2. Slider Selector: Number of Style Variations to Generate (Only applies to 'Fantasy Images' mode)",
-                interactive=True
-            )
+            # Modified structure ensures everything stays correctly inside the visibility container panel
+            with gr.Column(scale=1):
+                with gr.Group(visible=False) as modify_panel:
+                    gr.Markdown("### 🛠️ Modify Selected Variant")
+                    selected_preview = gr.Image(label="Target Image", type="pil", interactive=False)
+                    modify_input_prompt = gr.Textbox(
+                        label="What elements or changes would you like to add?", 
+                        placeholder="e.g. add a dog, add a dragon, change to winter snow"
+                    )
+                    strength_control = gr.Slider(
+                        minimum=0.05, maximum=0.95, value=0.1, step=0.05,
+                        label="Transformation Strength (Higher changes original image structure more)"
+                    )
+                    submit_modification_btn = gr.Button("Apply Prompt Modifications", variant="secondary")
+                    modification_output = gr.Image(label="Modified Variant Result", type="pil")
 
-            prompt = gr.Textbox(
-                value="A majestic castle sitting on top of a mountain cliffside",
-                label="Core Idea (Unique environment variations will match this)",
-                lines=3
-            )
+        with gr.Row():
+            with gr.Column(scale=1):
+                mode = gr.Radio(
+                    choices=["Text to Image", "Sketch to Image", "Fantasy Images"],
+                    value="Fantasy Images",
+                    label="1. Choose Your Generation Mode"
+                )
+                
+                count_slider = gr.Slider(
+                    minimum=1, 
+                    maximum=100, 
+                    value=1, 
+                    step=1, 
+                    label="2. Slider Selector: Number of Style Variations to Generate (Only applies to 'Fantasy Images' mode)",
+                    interactive=True
+                )
 
-            with gr.Group(visible=False) as sketch_inputs:
-                sketch_img = gr.Image(type="pil", label="Upload or Draw Sketch", sources=["upload", "clipboard"])
+                prompt = gr.Textbox(
+                    value="A majestic castle sitting on top of a mountain cliffside",
+                    label="Core Idea (Unique environment variations will match this)",
+                    lines=3
+                )
 
-            generate_btn = gr.Button("Execute Process Pipeline", variant="primary")
-            status_message = gr.HTML("")
+                with gr.Group(visible=False) as sketch_inputs:
+                    sketch_img = gr.Image(type="pil", label="Upload or Draw Sketch", sources=["upload", "clipboard"])
 
-    def update_ui(mode_selection):
-        if mode_selection == "Sketch to Image":
-            return (
-                gr.Group(visible=True), gr.Image(visible=True), gr.Slider(visible=False),
-                gr.Textbox(label="Prompt (Guide your sketch details)")
-            )
-        elif mode_selection == "Fantasy Images":
-            return (
-                gr.Group(visible=False), gr.Image(visible=False), gr.Slider(visible=True),
-                gr.Textbox(label="Core Idea (Unique environmental variations will match this)")
-            )
-        else:
-            return (
-                gr.Group(visible=False), gr.Image(visible=False), gr.Slider(visible=False),
-                gr.Textbox(label="Prompt")
-            )
+                generate_btn = gr.Button("Execute Process Pipeline", variant="primary")
+                status_message = gr.HTML("")
 
-    mode.change(
-        fn=update_ui, 
-        inputs=mode, 
-        outputs=[sketch_inputs, processed_preview, count_slider, prompt]
-    )
+        mode.change(
+            fn=update_ui, 
+            inputs=mode, 
+            outputs=[sketch_inputs, processed_preview, count_slider, prompt]
+        )
 
-    generate_btn.click(
-        fn=generate,
-        inputs=[mode, count_slider, sketch_img, prompt],
-        outputs=[processed_preview, output_gallery, status_message, generated_cache]
-    )
+        generate_btn.click(
+            fn=generate,
+            inputs=[mode, count_slider, sketch_img, prompt],
+            outputs=[processed_preview, output_gallery, status_message]
+        )
 
-    output_gallery.select(
-        fn=on_gallery_select,
-        inputs=[generated_cache],
-        outputs=[modify_panel, selected_preview, modification_output]
-    )
+        output_gallery.select(
+            fn=on_gallery_select,
+           # inputs=[generated_cache],
+            outputs=[modify_panel, selected_preview, modification_output]
+        )
 
-    submit_modification_btn.click(
-        fn=modify_selected_image,
-        inputs=[selected_preview, modify_input_prompt, strength_control],
-        outputs=[modification_output]
-    )
-
-if __name__ == "__main__":
-    demo.queue(default_concurrency_limit=MAX_CONCURRENT_WORKERS).launch(share=True)
+        submit_modification_btn.click(
+            fn=modify_selected_image,
+            inputs=[selected_preview, modify_input_prompt, strength_control],
+            outputs=[modification_output]
+        )
+        return (
+            processed_preview, output_gallery, modify_panel, selected_preview,
+            modify_input_prompt, strength_control, submit_modification_btn, modification_output,
+            mode, count_slider, prompt, sketch_inputs, sketch_img, generate_btn, status_message
+        )
+    #if __name__ == "__main__":
+    #    demo.queue(default_concurrency_limit=MAX_CONCURRENT_WORKERS).launch(share=True)
