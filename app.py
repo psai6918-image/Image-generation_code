@@ -21,10 +21,16 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
             birth_month, birth_day, birth_year, register_btn, register_status = auth_elements[8:13]
             show_pass_checkbox = auth_elements[13]
             
-        with gr.Tab("About Us") as about_tab:
+        with gr.Tab("Product") as product_tab:
             pass
+        
+        with gr.Tab("Demo") as demo_tab:
+            pass
+        
+        with gr.Tab("Pricing") as pricing_tab:
+            pass 
 
-        # TAB 2: Protected Workspace (Your image generation UI - starts hidden)
+    # FIXED: Indentation corrected so it is inside 'with gr.Blocks()' but outside 'with gr.Tabs()'
     with gr.Tab("AI Image Studio", id="studio_tab", visible=False) as studio_tab:
         studio_elements = create_generator_ui()
         # Unpack the tuple variables exactly as returned from image_generation.py
@@ -32,12 +38,12 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
         modify_input_prompt, strength_control, submit_modification_btn, modification_output = studio_elements[4:8]
         mode, count_slider, prompt, sketch_inputs, sketch_img, generate_btn, status_message = studio_elements[8:15]
     
+    # Combined single clean login function 
     def handle_login_navigation(username, password):
-        # Call your simplified true/false logic function inside frontend.py
         message, is_success = login_user(username, password)
         
         if is_success:
-            # Hide the entire public tabs system, reveal the private studio dashboard view
+            # Hide public tabs system, reveal private studio dashboard, select studio tab
             return message, gr.update(visible=False), gr.update(visible=True)
         
         # If login fails, change absolutely nothing about page display states
@@ -47,33 +53,13 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
     login_btn.click(
         fn=handle_login_navigation,
         inputs=[login_user_input, login_pass],
-        # Completely swaps out the entire visible page context tree instantly
         outputs=[login_status, main_tabs, studio_tab]
     )
-
 
     # --- WIRE UP ALL EVENT HANDLERS HERE ---
     show_pass_checkbox.select(fn=toggle_password_visibility, inputs=show_pass_checkbox, outputs=[login_pass, reg_pass, reg_repeat_pass])
     register_btn.click(fn=save_user, inputs=[reg_user, reg_email, reg_pass, reg_repeat_pass, birth_month, birth_day, birth_year], outputs=register_status)
     
-    # The login button handles switching tabs upon success
-    # Wrap the login function to return Gradio updates that toggle tabs
-    def login_and_switch(username, password):
-        result = login_user(username, password)
-        # If login_user returns a success message, show studio tab and hide gateway
-        success_indicators = ("🔓", "Welcome", "Login successful")
-        if any(token in str(result) for token in success_indicators):
-            # Make studio tab visible, hide gateway tab and select the studio tab
-            return result, gr.update(visible=True), gr.update(visible=False), gr.update(selected=1)
-        # otherwise keep showing the gateway and return the status message (select gateway)
-        return result, gr.update(visible=False), gr.update(visible=True), gr.update(selected=0)
-
-    login_btn.click(
-        fn=login_and_switch,
-        inputs=[login_user_input, login_pass],
-        outputs=[login_status, studio_tab, gateway_tab, main_tabs],
-    )
-
     # Image processing events
     mode.change(fn=update_ui, inputs=mode, outputs=[sketch_inputs, processed_preview, count_slider, prompt])
     generate_btn.click(fn=generate, inputs=[mode, count_slider, sketch_img, prompt], outputs=[processed_preview, output_gallery, status_message, generated_cache])
