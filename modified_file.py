@@ -536,7 +536,7 @@ def create_generator_ui():
             with gr.Row():
                 with gr.Column(scale=4):
                     #processed_preview = gr.Image(label="Processed Edge Map Preview", type="filepath", visible=False)
-                    output_gallery = gr.Gallery(label="Generated Output Images", columns=4, height="auto", type="filepath", elem_classes=["output-gallery-card"])
+                    output_gallery = gr.Gallery(show_label=False, columns=4, height="auto", type="filepath", elem_classes=["output-gallery-card"])
                 
                 with gr.Column(scale=2):
                     with gr.Group(visible=False, elem_classes=["modify-panel-card"]) as modify_panel:
