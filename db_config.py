@@ -20,7 +20,8 @@ def init_db():
         id INT AUTO_INCREMENT PRIMARY KEY,
         Username VARCHAR(255) NOT NULL UNIQUE,
         Email VARCHAR(255) NOT NULL UNIQUE,
-        Password VARCHAR(255) NOT NULL
+        Password VARCHAR(255) NOT NULL,
+        dob VARCHAR(20) DEFAULT NULL
     );
     """
     connection = None
@@ -46,354 +47,236 @@ def hash_password(password: str) -> str:
     return f"{salt}:{hashed_bytes}"
 
 # --- GRADIO ACTIONS ---
-def save_user(username, email, password, confirm_password):
-    """Validates parameters and saves user to MySQL database."""
+def save_user(username, email, password, repeat_password, month, day, year):
+    """Validates parameters and saves user to MySQL database with optional DOB."""
     username = username.strip()
     email = email.strip()
     
-    if not username or not email or not password or not confirm_password:
-        return "### ⚠️ All fields are required!"
+    if not username or not email or not password or not repeat_password:
+        return "⚠️ All fields are required!", False
         
-    if password != confirm_password:
-        return "### ❌ Passwords do not match\nPlease verify both fields."
+    if password != repeat_password:
+        return "❌ Passwords do not match. Please try again.", False
     
+    # Check if a valid DOB dropdown configuration is selected; otherwise set to None (NULL)
+    if month == "Select Month" or day == "Select Day" or year == "Select Year":
+        dob_value = None
+    else:
+        dob_value = f"{year}-{month}-{day}"
+        
     connection = None
     try:
         connection = mysql.connector.connect(**DB_CONFIG)
         if connection.is_connected():
             cursor = connection.cursor()
             
+            # Check if username exists
             cursor.execute("SELECT Username FROM users WHERE Username = %s", (username,))
             if cursor.fetchone():
-                return f"### ❌ Username '{username}' is already taken."
+                return f"❌ Username '{username}' is already taken.", False
                 
+            # Check if email exists
             cursor.execute("SELECT Email FROM users WHERE Email = %s", (email,))
             if cursor.fetchone():
-                return "### ❌ This email is already registered."
+                return "❌ This email is already registered.", False
             
             secure_password_string = hash_password(password)
             insert_query = """
-            INSERT INTO users (Username, Email, Password) 
-            VALUES (%s, %s, %s)
+            INSERT INTO users (Username, Email, Password, dob) 
+            VALUES (%s, %s, %s, %s)
             """
-            cursor.execute(insert_query, (username, email, secure_password_string))
+            cursor.execute(insert_query, (username, email, secure_password_string, dob_value))
             connection.commit()
             
-            return f"### 🎉 Welcome aboard, {username}!\nRegistration successful."
+            return f"🎉 Welcome aboard, {username}! Registration successful.", True
             
     except Error as e:
-        return f"### ❌ Database Error\nCould not process request: {e}"
+        return f"❌ Database Error: {e}", False
         
     finally:
         if connection and connection.is_connected():
             cursor.close()
             connection.close()
 
-# --- IMAGE SOURCES (20 UNIQUE SQUARE IMAGES) ---
+def login_user(username_or_email, password):
+    """Checks credentials against the MySQL database."""
+    username_or_email = username_or_email.strip()
+    
+    if not username_or_email or not password:
+        return "⚠️ Please fill in all fields!", False
+        
+    connection = None
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        if connection.is_connected():
+            cursor = connection.cursor(dictionary=True)
+            
+            query = "SELECT Username, Password FROM users WHERE Username = %s OR Email = %s"
+            cursor.execute(query, (username_or_email, username_or_email))
+            user_record = cursor.fetchone()
+            
+            if not user_record:
+                return "❌ Account not found. Please register first.", False
+                
+            stored_credential_string = user_record['Password']
+            if ":" not in stored_credential_string:
+                return "❌ Stored password integrity error.", False
+                
+            salt, stored_hash = stored_credential_string.split(":", 1)
+            runtime_hash = hashlib.sha256((salt + password).encode('utf-8')).hexdigest()
+            
+            if runtime_hash == stored_hash:
+                return f"🔓 Welcome back, {user_record['Username']}! Login successful.", True
+            else:
+                return "❌ Incorrect password. Please try again.", False
+                
+    except Error as e:
+        return f"❌ Database Error: {e}", False
+    finally:
+        if connection and connection.is_connected():
+            cursor.close()
+            connection.close()
+
+# --- STABLE & VERIFIED ASSETS GRID ---
 images_list = [
-    f"https://picsum.photos/300/300?random={i}" for i in range(1, 21)
+    "https://picsum.photos/id/1015/400/300",
+    "https://picsum.photos/id/1016/400/300",
+    "https://picsum.photos/id/1018/400/300",
+    "https://picsum.photos/id/1019/400/300",
+    "https://picsum.photos/id/1022/400/300",
+    "https://picsum.photos/id/1025/400/300",
+    "https://picsum.photos/id/1035/400/300",
+    "https://picsum.photos/id/1039/400/300",
+    "https://picsum.photos/id/1043/400/300",
+    "https://picsum.photos/id/1044/400/300",
+    "https://picsum.photos/id/1045/400/300",
+    "https://picsum.photos/id/1047/400/300"
 ]
 
-# --- PREMIUM LUXURY GLASSMORPHISM CSS ---
-custom_css = """
-.gradio-container {
-    background: #000000 !important;
-    min-height: 100vh;
-    padding: 40px 30px !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-#dynamic-bg-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
-    background: #000000;
-}
-.gradio-container h1, 
-.gradio-container h2, 
-.gradio-container h3, 
-.gradio-container p,
-.gradio-container span,
-.gradio-container label,
-.gradio-container .prose {
-    color: #ffffff !important;
-}
-.top-nav {
-    display: flex;
-    gap: 40px;
-    padding: 10px 0 30px 0;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: rgba(255, 255, 255, 0.6);
-}
-.top-nav span {
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-.top-nav span:hover {
-    color: #ffffff !important;
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
-}
-.glass-panel {
-    background: rgba(255, 255, 255, 0.02) !important; 
-    backdrop-filter: blur(35px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.15) !important; 
-    border-left: 1px solid rgba(255, 255, 255, 0.12) !important; 
-    border-radius: 24px !important;
-    padding: 35px !important;
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.9) !important;
-}
-.glass-panel .form, 
-.glass-panel .fieldset, 
-.glass-panel .padded,
-.glass-panel div[class*="container"],
-.glass-panel div[class*="form"],
-.glass-panel div[class*="fieldset"] {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-}
-.glass-panel input, 
-.glass-panel textarea,
-.glass-panel .gr-box {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 12px !important;
-    color: #ffffff !important; 
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-.glass-panel input {
-    padding: 14px 16px !important;
-    margin-bottom: 14px !important;
-}
-.glass-panel input:focus {
-    background: rgba(255, 255, 255, 0.10) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1) !important;
-}
-.glass-panel label span {
-    background: transparent !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-    font-weight: 600 !important;
-    font-size: 13px !important;
-    margin-bottom: 8px !important;
-    display: block !important;
-    letter-spacing: 0.5px;
-}
-.password-row-layout {
-    display: flex !important;
-    align-items: flex-end !important; 
-    gap: 12px !important;
-    width: 100% !important;
-    margin-bottom: 8px !important;
-}
-.password-row-layout > div:first-child {
-    flex-grow: 1 !important;
-}
-.inline-toggle-btn {
-    background: rgba(255, 255, 255, 0.06) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    border-radius: 12px !important;
-    color: #ffffff !important;
-    height: 52px !important; 
-    padding: 0 18px !important;
-    font-weight: 600 !important;
-    font-size: 13px !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-    margin-bottom: 14px !important; 
-}
-.inline-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.16) !important;
-    border-color: rgba(255, 255, 255, 0.35) !important;
-}
-.glass-panel button.primary {
-    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
-    border: none !important;
-    color: white !important;
-    font-weight: 600 !important;
-    border-radius: 12px !important;
-    padding: 15px !important;
-    width: 100% !important;
-    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3) !important;
-    transition: all 0.3s ease !important;
-    margin-top: 15px;
-    letter-spacing: 0.5px;
-}
-.glass-panel button.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5) !important;
-}
-.status-box {
-    margin-top: 20px;
-    border-radius: 12px;
-    text-align: center;
-}
-.four-row-gallery div.gallery {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 12px !important;
-}
-"""
-
-glass_theme = gr.themes.Soft().set(
-    block_background_fill="rgba(0, 0, 0, 1)",
-    input_background_fill="rgba(255, 255, 255, 0.03)",
-    input_border_color="rgba(255, 255, 255, 0.1)"
-)
-
-# --- GRADIO INTERFACE DESIGN ---
-with gr.Blocks(css=custom_css, theme=glass_theme) as demo:
-    
-    # Background Canvas Element
-    gr.HTML(
-        """
-        <canvas id="dynamic-bg-canvas"></canvas>
-        <script>
-            const canvas = document.getElementById('dynamic-bg-canvas');
-            const ctx = canvas.getContext('2d');
+# --- MODULAR GRADIO UI FUNCTION ---
+def create_login_ui():
+    """Generates the login screen components and assigns their internal events."""
+    with gr.Group() as auth_container:
+        with gr.Row():
             
-            let width = canvas.width = window.innerWidth;
-            let height = canvas.height = window.innerHeight;
-            
-            window.addEventListener('resize', () => {
-                width = canvas.width = window.innerWidth;
-                height = canvas.height = window.innerHeight;
-            });
-            
-            class NebulaOrb {
-                constructor(x, y, radius, color, speedX, speedY) {
-                    this.x = x;
-                    this.y = y;
-                    this.radius = radius;
-                    this.color = color;
-                    this.speedX = speedX;
-                    this.speedY = speedY;
-                }
-                update() {
-                    this.x += this.speedX;
-                    this.y += this.speedY;
-                    if (this.x < -this.radius || this.x > width + this.radius) this.speedX *= -1;
-                    if (this.y < -this.radius || this.y > height + this.radius) this.speedY *= -1;
-                }
-                draw() {
-                    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
-                    gradient.addColorStop(0, this.color);
-                    gradient.addColorStop(1, 'transparent');
-                    ctx.fillStyle = gradient;
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-            
-            const orbs = [
-                new NebulaOrb(width * 0.2, height * 0.3, 450, 'rgba(120, 20, 60, 0.15)', 0.3, 0.2),
-                new NebulaOrb(width * 0.8, height * 0.2, 500, 'rgba(20, 60, 120, 0.15)', -0.2, 0.3),
-                new NebulaOrb(width * 0.5, height * 0.8, 550, 'rgba(60, 20, 120, 0.15)', 0.3, -0.2)
-            ];
-            
-            function renderLoop() {
-                ctx.fillStyle = '#000000'; 
-                ctx.fillRect(0, 0, width, height);
-                orbs.forEach(orb => {
-                    orb.update();
-                    orb.draw();
-                });
-                requestAnimationFrame(renderLoop);
-            }
-            renderLoop();
-        </script>
-        """
-    )
-    
-    gr.HTML(
-        """
-        <div class="top-nav">
-            <span>PRODUCT</span>
-            <span>DEMO</span>
-            <span>PRICING</span>
-        </div>
-        """
-    )
-    
-    with gr.Row():
-        with gr.Column():
-            gr.Markdown(
-                """
-                # 🚀 Welcome to Our Innovation Platform
-                ### Experience the power of next-generation AI tools built just for you.
-                """
-            )
-    
-    gr.HTML("<br>") 
-    
-    with gr.Row():
-        with gr.Column(scale=1, elem_classes=["glass-panel"]):
-            gr.Markdown(
-                """
-                ## Why Join Us?
-                * **Instant Access:** Build, test, and deploy with top-tier AI pipelines.
-                * **Cloud-Powered:** Heavy computational lift handled seamlessly.
-                """
-            )
-            gr.Markdown("### Features Preview")
-            gr.Gallery(
-                value=images_list,
-                columns=5, rows=4, height="auto", object_fit="cover", 
-                show_label=False, container=False, interactive=False,
-                elem_classes=["four-row-gallery"]
-            )
-            
-        with gr.Column(scale=1, elem_classes=["glass-panel"]):
-            gr.Markdown("## Create Your Free Account")
-            
-            reg_user = gr.Textbox(label="Username", placeholder="e.g., ai_creator99", max_lines=1)
-            reg_email = gr.Textbox(label="Email Address", placeholder="you@example.com", max_lines=1)
-            
-            with gr.Row(elem_classes=["password-row-layout"]):
-                reg_pass = gr.Textbox(
-                    label="Password", placeholder="Choose a secure password", 
-                    type="password", max_lines=1, container=False
+            # COLUMN 1: Image Grid Gallery Module (Left Side)
+            with gr.Column(scale=4):
+                gr.Gallery(
+                    value=images_list,
+                    columns=4,          
+                    rows=3,             
+                    object_fit="cover", 
+                    show_label=False,
+                    container=False,     
+                    interactive=False
                 )
-                toggle_pass_btn = gr.Button("👁️ Show", elem_classes=["inline-toggle-btn"], min_width=75)
             
-            with gr.Row(elem_classes=["password-row-layout"]):
-                reg_confirm_pass = gr.Textbox(
-                    label="Confirm Password", placeholder="Repeat your password", 
-                    type="password", max_lines=1, container=False
-                )
-                toggle_confirm_btn = gr.Button("👁️ Show", elem_classes=["inline-toggle-btn"], min_width=75)
-            
-            register_btn = gr.Button("Register Now", variant="primary")
-            
-            status_output = gr.Markdown(elem_classes=["status-box"])
+            # COLUMN 2: Authentication Tabs Area (Right Side)
+            with gr.Column(scale=3):
+                with gr.Tabs() as auth_tabs:
+                    
+                    # --- TAB 1: Create Account ---
+                    with gr.Tab("Create Account", id="create_tab"):
+                        gr.Markdown("## Create Your Free Account")
+                        
+                        with gr.Group():
+                            reg_user = gr.Textbox(label="Username", placeholder="e.g., ai_creator99", max_lines=1)
+                            reg_email = gr.Textbox(label="Email Address", placeholder="you@example.com", max_lines=1)
+                            
+                            reg_pass = gr.Textbox(
+                                label="Password", placeholder="Choose a secure password", 
+                                type="password", max_lines=1, elem_id="reg_password_field"
+                            )
+                            reg_repeat_pass = gr.Textbox(
+                                label="Repeat Password", placeholder="Confirm your password", 
+                                type="password", max_lines=1, elem_id="reg_repeat_password_field"
+                            )
+                            
+                            reg_show_pass = gr.Checkbox(label="Show Password", interactive=True)
+                            
+                            gr.Markdown("<label style='display:block; font-weight:700; font-size:14px; margin-top:14px; margin-bottom:8px;'>Please enter your date of birth (Optional):</label>")
 
-    # --- ACTION LISTENERS ---
-    pass_visible = gr.State(False)
-    confirm_visible = gr.State(False)
+                            with gr.Row():
+                                birth_month = gr.Dropdown(
+                                    choices=["Select Month"] + ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                                    value="Select Month", show_label=False
+                                )
+                                birth_day = gr.Dropdown(
+                                    choices=["Select Day"] + [str(i) for i in range(1, 32)],
+                                    value="Select Day", show_label=False
+                                )
+                                birth_year = gr.Dropdown(
+                                    choices=["Select Year"] + [str(i) for i in range(1920, 2027)],
+                                    value="Select Year", show_label=False
+                                )
+                                                                            
+                        register_btn = gr.Button("Register Now", variant="primary")
+                        register_status = gr.Markdown()
+                
+                    # --- TAB 2: Sign In ---
+                    with gr.Tab("Sign In", id="signin_tab"):
+                        gr.Markdown("## Access Your Account")
+                        
+                        login_user_input = gr.Textbox(label="Username or Email", placeholder="Enter your credentials", max_lines=1)
+                        login_pass = gr.Textbox(
+                            label="Password", placeholder="Enter your security password", 
+                            type="password", max_lines=1, elem_id="login_password_field"
+                        )
+                        
+                        login_show_pass = gr.Checkbox(label="Show Password", interactive=True)
+                        login_btn = gr.Button("Sign In", variant="primary")
+                        login_status = gr.Markdown()
+                        
+                        gr.HTML(
+                            '<div style="text-align: center; margin-top: 18px;">'
+                            '    <a href="#" style="font-size: 13px; text-decoration: underline;">Forgot Password?</a>'
+                            '</div>'
+                        )
 
-    def handle_toggle(current_state):
-        new_state = not current_state
-        return (
-            new_state, 
-            gr.Textbox(type="text" if new_state else "password"), 
-            gr.Button(value="🙈 Hide" if new_state else "👁️ Show")
+        # --- JAVASCRIPT TOGGLES ---
+        login_show_pass.change(
+            fn=None, inputs=[login_show_pass], outputs=[],
+            js="(checked) => { const f = document.querySelector('#login_password_field input'); if(f) f.type = checked ? 'text' : 'password'; }"
         )
 
-    toggle_pass_btn.click(fn=handle_toggle, inputs=pass_visible, outputs=[pass_visible, reg_pass, toggle_pass_btn])
-    toggle_confirm_btn.click(fn=handle_toggle, inputs=confirm_visible, outputs=[confirm_visible, reg_confirm_pass, toggle_confirm_btn])
+        reg_show_pass.change(
+            fn=None, inputs=[reg_show_pass], outputs=[],
+            js="""
+            (checked) => { 
+                const p1 = document.querySelector('#reg_password_field input'); 
+                const p2 = document.querySelector('#reg_repeat_password_field input');
+                if(p1) p1.type = checked ? 'text' : 'password'; 
+                if(p2) p2.type = checked ? 'text' : 'password'; 
+            }
+            """
+        )
 
+    return (
+        login_user_input, login_pass, login_btn, login_status,
+        reg_user, reg_email, reg_pass, reg_repeat_pass,
+        birth_month, birth_day, birth_year,
+        register_btn, register_status, reg_show_pass
+    )
+
+# --- APP MOUNT & ORCHESTRATION ---
+with gr.Blocks() as demo:
+    (
+        login_user_input, login_pass, login_btn, login_status,
+        reg_user, reg_email, reg_pass, reg_repeat_pass,
+        birth_month, birth_day, birth_year,
+        register_btn, register_status, reg_show_pass
+    ) = create_login_ui()
+    
     register_btn.click(
         fn=save_user,
-        inputs=[reg_user, reg_email, reg_pass, reg_confirm_pass],
-        outputs=status_output
+        inputs=[reg_user, reg_email, reg_pass, reg_repeat_pass, birth_month, birth_day, birth_year],
+        outputs=[register_status, gr.State()]
+    )
+    
+    login_btn.click(
+        fn=login_user,
+        inputs=[login_user_input, login_pass],
+        outputs=[login_status, gr.State()]
     )
 
 if __name__ == "__main__":
