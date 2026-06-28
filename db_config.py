@@ -59,7 +59,7 @@ html, body, grad-app, .gradio-container {
     gap: 32px !important;
 }
 
-/* Constrains form card parent layout from stretching too wide on massive screens */
+/* Layout panel maximum boundary constraint definitions */
 .gradio-container div[class*="dark-auth-panel"],
 .gradio-container .dark-auth-panel {
     max-width: 460px !important;
@@ -267,10 +267,23 @@ input::placeholder, textarea::placeholder {
     gap: 0px !important;
 }
 
-#forgot-password-link {
-    margin-top: 2px !important;
-    padding-top: 0px !important;
-    margin-bottom: 5px !important;
+/* CUSTOM LINK STYLING FOR FORGOT PASSWORD BUTTON */
+.forgot-password-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #ffffff !important;
+    text-decoration: underline !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 10px auto 0 auto !important;
+    display: block !important;
+    width: fit-content !important;
+}
+.forgot-password-btn:hover {
+    color: #ff9900 !important;
+    background: transparent !important;
 }
 
 footer { display: none !important; }
@@ -319,7 +332,7 @@ def hash_password(password: str) -> str:
     hashed_bytes = hashlib.sha256((salt + password).encode('utf-8')).hexdigest()
     return f"{salt}:{hashed_bytes}"
 
-# --- GRADIO ACTIONS ---
+
 def save_user(username, email, password, repeat_password):
     """Validates parameters and saves user to MySQL database."""
     username = username.strip()
@@ -363,6 +376,7 @@ def save_user(username, email, password, repeat_password):
             cursor.close()
             connection.close()
 
+
 def login_user(username_or_email, password):
     """Checks credentials against the MySQL database."""
     username_or_email = username_or_email.strip()
@@ -402,18 +416,93 @@ def login_user(username_or_email, password):
             cursor.close()
             connection.close()
 
+
+# --- PASSWORD RECOVERY ENGINES ---
+def direct_forgot_password_trigger(username_or_email):
+    """
+    Directly triggered when user clicks 'Forgot Password?'. 
+    Reads the value from the existing sign-in screen username field.
+    """
+    target = username_or_email.strip()
+    if not target:
+        # Error stays on the Sign In view so they know they need to enter a value first
+        return (
+            "⚠️ Please enter your Username or Email address in the text box above before clicking Forgot Password.", 
+            gr.update(), # Keep forgot tab hidden
+            gr.update(), # Don't shift current tab
+            gr.update(), gr.update(), gr.update(), gr.update(value=False) # Reset components invisible/uncheck toggle
+        )
+        
+    connection = None
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        if connection.is_connected():
+            cursor = connection.cursor()
+            query = "SELECT Username FROM users WHERE Username = %s OR Email = %s"
+            cursor.execute(query, (target, target))
+            user = cursor.fetchone()
+            
+            if user:
+                matched_username = user[0]
+                return (
+                    f"✅ Account found for '{matched_username}'. Please choose your new password below.",
+                    gr.update(visible=True),               # Make Password Reset Tab Visible
+                    gr.update(selected="forgot_tab"),       # Force switch view directly to it
+                    gr.update(visible=True),                # Show password field
+                    gr.update(visible=True),                # Show repeat password field
+                    gr.update(visible=True),                # Show submit change button
+                    gr.update(visible=True, value=False)    # Show reset show pass checkbox & make sure unchecked
+                )
+            else:
+                return (
+                    "❌ No profile found matching that Username or Email.", 
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+                )
+    except Error as e:
+        return f"❌ Database operational fault: {e}", gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+    finally:
+        if connection and connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
+def commit_new_password(username_or_email, new_pass, repeat_pass):
+    """Commits the new cryptographic string into the MySQL table data schema."""
+    target = username_or_email.strip()
+    new_pass = new_pass.strip()
+    repeat_pass = repeat_pass.strip()
+    
+    if not new_pass or not repeat_pass:
+        return "⚠️ Password fields cannot be empty."
+    if new_pass != repeat_pass:
+        return "❌ Passwords do not match. Please review."
+        
+    connection = None
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        if connection.is_connected():
+            cursor = connection.cursor()
+            
+            secure_password_string = hash_password(new_pass)
+            
+            update_query = "UPDATE users SET Password = %s WHERE Username = %s OR Email = %s"
+            cursor.execute(update_query, (secure_password_string, target, target))
+            connection.commit()
+            
+            return "🎉 Password updated successfully! You can now switch back to the Sign In tab."
+    except Error as e:
+        return f"❌ Failed writing update to database: {e}"
+    finally:
+        if connection and connection.is_connected():
+            cursor.close()
+            connection.close()
+
+
 # --- HIGH CAPACITY 1000 IMAGE DYNAMIC GENERATION ENGINE ---
 def get_random_fantasy_gallery():
-    """
-    Generates a massive, dynamic pool of 1000 completely unique image links via Picsum.
-    Samples 12 unique seeds on every single interface load/refresh.
-    Guarantees no broken links, zero duplicate grids, and flawless rendering.
-    """
     random_seeds = random.sample(range(1, 1001), 12)
-    return [
-        f"https://picsum.photos/400/300?random={seed}"
-        for seed in random_seeds
-    ]
+    return [f"https://picsum.photos/400/300?random={seed}" for seed in random_seeds]
+
 
 def create_login_ui():
     """Generates the login screen components and assigns their internal events."""
@@ -453,9 +542,7 @@ def create_login_ui():
                                 type="password", max_lines=1, elem_id="reg_repeat_password_field"
                             )
                             
-                            # Checked state controls BOTH reg_password_field and reg_repeat_password_field
                             reg_show_pass = gr.Checkbox(label="Show Password", interactive=True)
-                                                                                
                             register_btn = gr.Button("Register Now", variant="primary")
                             register_status = gr.Markdown()
                 
@@ -473,20 +560,28 @@ def create_login_ui():
                         login_btn = gr.Button("Sign In", variant="primary")
                         login_status = gr.Markdown()
                         
-                        gr.HTML(
-                            '<div id="forgot-password-link" style="text-align: center;">'
-                            '    <a href="#" style="font-size: 13px; text-decoration: underline;">Forgot Password?</a>'
-                            '</div>'
-                        )
+                        forgot_link_btn = gr.Button("Forgot Password?", elem_classes=["forgot-password-btn"])
+
+                    # --- TAB 3: Forgot Password (Dynamically populated from Sign In field) ---
+                    with gr.Tab("Password Reset", id="forgot_tab", visible=False) as forgot_tab:
+                        gr.Markdown("## Recover Account")
+                        
+                        # Step 2 Fields - Directly shown once account verification matches field data
+                        reset_new_password = gr.Textbox(label="New Password", placeholder="Enter a new password", type="password", max_lines=1, visible=False, elem_id="reset_password_field")
+                        reset_repeat_password = gr.Textbox(label="Confirm New Password", placeholder="Repeat your new password", type="password", max_lines=1, visible=False, elem_id="reset_repeat_password_field")
+                        
+                        reset_show_pass = gr.Checkbox(label="Show Password", interactive=True, visible=False)
+                        reset_save_btn = gr.Button("Update Password", variant="primary", visible=False)
+                        
+                        forgot_status = gr.Markdown()
+                        back_to_signin_btn = gr.Button("← Back to Sign In", elem_classes=["forgot-password-btn"])
 
         # --- JAVASCRIPT TOGGLES ---
-        # Controls visibility for the single Login field
         login_show_pass.change(
             fn=None, inputs=[login_show_pass], outputs=[],
             js="(checked) => { const f = document.querySelector('#login_password_field input'); if(f) f.type = checked ? 'text' : 'password'; }"
         )
 
-        # Controls visibility simultaneously for BOTH fields on the registration screen
         reg_show_pass.change(
             fn=None, inputs=[reg_show_pass], outputs=[],
             js="""
@@ -500,10 +595,25 @@ def create_login_ui():
             """
         )
 
+        reset_show_pass.change(
+            fn=None, inputs=[reset_show_pass], outputs=[],
+            js="""
+            (checked) => { 
+                const targetType = checked ? 'text' : 'password';
+                const p1 = document.querySelector('#reset_password_field input'); 
+                const p2 = document.querySelector('#reset_repeat_password_field input');
+                if(p1) p1.type = targetType; 
+                if(p2) p2.type = targetType; 
+            }
+            """
+        )
+
     return (
         login_user_input, login_pass, login_btn, login_status,
         reg_user, reg_email, reg_pass, reg_repeat_pass,
-        register_btn, register_status, reg_show_pass
+        register_btn, register_status, reg_show_pass,
+        forgot_link_btn, forgot_tab, auth_tabs, forgot_status, back_to_signin_btn,
+        reset_new_password, reset_repeat_password, reset_show_pass, reset_save_btn
     )
 
 # --- APP MOUNT ---
@@ -511,7 +621,9 @@ with gr.Blocks(css=LOGIN_CSS) as demo:
     (
         login_user_input, login_pass, login_btn, login_status,
         reg_user, reg_email, reg_pass, repeat_password,
-        register_btn, register_status, reg_show_pass
+        register_btn, register_status, reg_show_pass,
+        forgot_link_btn, forgot_tab, auth_tabs, forgot_status, back_to_signin_btn,
+        reset_new_password, reset_repeat_password, reset_show_pass, reset_save_btn
     ) = create_login_ui()
     
     register_btn.click(
@@ -526,8 +638,27 @@ with gr.Blocks(css=LOGIN_CSS) as demo:
         outputs=[login_status, gr.State()]
     )
 
+    # --- SIMPLIFIED FORGOT PASSWORD EVENT HANDLER ---
+    # Clicking "Forgot Password?" directly takes the inputs from the current Sign-In text field
+    forgot_link_btn.click(
+        fn=direct_forgot_password_trigger,
+        inputs=[login_user_input], # Reads directly from your active Sign-In field!
+        outputs=[login_status, forgot_tab, auth_tabs, reset_new_password, reset_repeat_password, reset_save_btn, reset_show_pass]
+    )
+    
+    reset_save_btn.click(
+        fn=commit_new_password,
+        inputs=[login_user_input, reset_new_password, reset_repeat_password],
+        outputs=[forgot_status]
+    )
+
+    back_to_signin_btn.click(
+        fn=lambda: (gr.update(selected="signin_tab"), gr.update(visible=False)),
+        inputs=None,
+        outputs=[auth_tabs, forgot_tab]
+    )
+
     # FORCE DARK MODE ON LOAD USING JS:
-    # This automatically adds the '.dark' class to the html document header
     demo.load(
         fn=None,
         inputs=None,
