@@ -430,7 +430,7 @@ def direct_forgot_password_trigger(username_or_email):
             "⚠️ Please enter your Username or Email address in the text box above before clicking Forgot Password.", 
             gr.update(), # Keep forgot tab hidden
             gr.update(), # Don't shift current tab
-            gr.update(), gr.update(), gr.update() # Reset components invisible
+            gr.update(), gr.update(), gr.update(), gr.update(value=False) # Reset components invisible/uncheck toggle
         )
         
     connection = None
@@ -450,15 +450,16 @@ def direct_forgot_password_trigger(username_or_email):
                     gr.update(selected="forgot_tab"),       # Force switch view directly to it
                     gr.update(visible=True),                # Show password field
                     gr.update(visible=True),                # Show repeat password field
-                    gr.update(visible=True)                 # Show submit change button
+                    gr.update(visible=True),                # Show submit change button
+                    gr.update(visible=True, value=False)    # Show reset show pass checkbox & make sure unchecked
                 )
             else:
                 return (
                     "❌ No profile found matching that Username or Email.", 
-                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
                 )
     except Error as e:
-        return f"❌ Database operational fault: {e}", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        return f"❌ Database operational fault: {e}", gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
     finally:
         if connection and connection.is_connected():
             cursor.close()
@@ -566,9 +567,10 @@ def create_login_ui():
                         gr.Markdown("## Recover Account")
                         
                         # Step 2 Fields - Directly shown once account verification matches field data
-                        reset_new_password = gr.Textbox(label="New Password", placeholder="Enter a new password", type="password", max_lines=1, visible=False)
-                        reset_repeat_password = gr.Textbox(label="Confirm New Password", placeholder="Repeat your new password", type="password", max_lines=1, visible=False)
+                        reset_new_password = gr.Textbox(label="New Password", placeholder="Enter a new password", type="password", max_lines=1, visible=False, elem_id="reset_password_field")
+                        reset_repeat_password = gr.Textbox(label="Confirm New Password", placeholder="Repeat your new password", type="password", max_lines=1, visible=False, elem_id="reset_repeat_password_field")
                         
+                        reset_show_pass = gr.Checkbox(label="Show Password", interactive=True, visible=False)
                         reset_save_btn = gr.Button("Update Password", variant="primary", visible=False)
                         
                         forgot_status = gr.Markdown()
@@ -593,12 +595,25 @@ def create_login_ui():
             """
         )
 
+        reset_show_pass.change(
+            fn=None, inputs=[reset_show_pass], outputs=[],
+            js="""
+            (checked) => { 
+                const targetType = checked ? 'text' : 'password';
+                const p1 = document.querySelector('#reset_password_field input'); 
+                const p2 = document.querySelector('#reset_repeat_password_field input');
+                if(p1) p1.type = targetType; 
+                if(p2) p2.type = targetType; 
+            }
+            """
+        )
+
     return (
         login_user_input, login_pass, login_btn, login_status,
         reg_user, reg_email, reg_pass, reg_repeat_pass,
         register_btn, register_status, reg_show_pass,
         forgot_link_btn, forgot_tab, auth_tabs, forgot_status, back_to_signin_btn,
-        reset_new_password, reset_repeat_password, reset_save_btn
+        reset_new_password, reset_repeat_password, reset_show_pass, reset_save_btn
     )
 
 # --- APP MOUNT ---
@@ -608,7 +623,7 @@ with gr.Blocks(css=LOGIN_CSS) as demo:
         reg_user, reg_email, reg_pass, repeat_password,
         register_btn, register_status, reg_show_pass,
         forgot_link_btn, forgot_tab, auth_tabs, forgot_status, back_to_signin_btn,
-        reset_new_password, reset_repeat_password, reset_save_btn
+        reset_new_password, reset_repeat_password, reset_show_pass, reset_save_btn
     ) = create_login_ui()
     
     register_btn.click(
@@ -628,7 +643,7 @@ with gr.Blocks(css=LOGIN_CSS) as demo:
     forgot_link_btn.click(
         fn=direct_forgot_password_trigger,
         inputs=[login_user_input], # Reads directly from your active Sign-In field!
-        outputs=[login_status, forgot_tab, auth_tabs, reset_new_password, reset_repeat_password, reset_save_btn]
+        outputs=[login_status, forgot_tab, auth_tabs, reset_new_password, reset_repeat_password, reset_save_btn, reset_show_pass]
     )
     
     reset_save_btn.click(
