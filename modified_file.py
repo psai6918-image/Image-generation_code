@@ -118,7 +118,7 @@ def preprocess_sketch(pil_image):
 # --- 4. CORE PREDICTION PIPELINE ---
 def generate(mode, count_selection, sketch_img, base_prompt, progress=gr.Progress()):
     start_dt = datetime.now()
-    warning_msg = '<div style="text-align: center; width: 100%; font-size: 1.1em; color: #888; background: transparent; border: none; padding: 0; margin: 10px 0;">⚠ AI can make mistakes. Please verify important outputs.</div>'
+    warning_msg = '<div style="text-align: center; width: 100%; font-size: 1.1em; color: #fff; background: transparent; border: none; padding: 0; margin: 10px 0;">⚠ AI can make mistakes. Please verify important outputs.</div>'
 
     if not base_prompt.strip():
         raise gr.Error("Please enter a style or content prompt!")
@@ -277,25 +277,25 @@ def modify_selected_image(base_image, modify_prompt, strength_slider, base_promp
         torch.cuda.empty_cache()
         gc.collect()
 
-    return save_path, '<div style="color: #16a34a; font-weight: bold;">✨ Workspace modifications applied! Check your target window.</div>'
+    return save_path, '<div style="color: #4ade80; font-weight: bold;">✨ Workspace modifications applied! Check your target window.</div>'
 
 
 def reset_workspace_image(backup_path):
     if not backup_path:
-        return gr.update(), '<div style="color: #dc2626;">No original image available to reset to.</div>'
-    return backup_path, '<div style="color: #2563eb;">🔄 Reset workspace back to your original base image. Try altering strength values!</div>'
+        return gr.update(), '<div style="color: #f87171;">No original image available to reset to.</div>'
+    return backup_path, '<div style="color: #60a5fa;">🔄 Reset workspace back to your original base image. Try altering strength values!</div>'
 
 
 def set_processing_notice():
     return (
-        '<div style="text-align: center; width: 100%; font-weight: bold; color: #d97706; background: transparent; border: none; padding: 0; margin: 10px 0;">⏳ Processing Pipeline Initiated... <span style="font-weight: normal; font-size: 0.9em; color: #555;">(AI can make mistakes. Generating asset frames...)</span></div>',
+        '<div style="text-align: center; width: 100%; font-weight: bold; color: #fbbf24; background: transparent; border: none; padding: 0; margin: 10px 0;">⏳ Processing Pipeline Initiated... <span style="font-weight: normal; font-size: 0.9em; color: #fff;">(AI can make mistakes. Generating asset frames...)</span></div>',
         gr.update(visible=False)
     )
 
 
 def append_to_favorites(target_img, custom_name, current_favorites):
     if not target_img:
-        return current_favorites, gr.update(), '<div style="color: #dc2626;">Select or modify an image before archiving.</div>'
+        return current_favorites, gr.update(), '<div style="color: #f87171;">Select or modify an image before archiving.</div>'
     
     try:
         if isinstance(target_img, str):
@@ -314,12 +314,12 @@ def append_to_favorites(target_img, custom_name, current_favorites):
         
         if favorite_path not in current_favorites:
             current_favorites.append(favorite_path)
-            status = f'<div style="color: #16a34a; font-weight: bold;">💖 Saved as "{clean_name}" into Favorites Scrapbook!</div>'
+            status = f'<div style="color: #4ade80; font-weight: bold;">💖 Saved as "{clean_name}" into Favorites Scrapbook!</div>'
         else:
-            status = f'<div style="color: #d97706;">Image is already archived under this configuration pathway.</div>'
+            status = f'<div style="color: #fbbf24;">Image is already archived under this configuration pathway.</div>'
             
     except Exception as e:
-        return current_favorites, gr.update(), f'<div style="color: #dc2626;">Failed saving file asset: {str(e)}</div>'
+        return current_favorites, gr.update(), f'<div style="color: #f87171;">Failed saving file asset: {str(e)}</div>'
         
     return current_favorites, gr.update(value=current_favorites, visible=True), status
 
@@ -335,14 +335,11 @@ def filter_favorites(query, current_favorites):
 
 # --- 6. GRADIO INTERFACE CONFIGURATION & CUSTOM STYLE RULES ---
 GENERATOR_CSS = """
-/* ============================================================
-   1. GLOBAL CANVAS & VIBRANT BACKGROUND BACKDROP
-============================================================ */
 html, body, grad-app, .gradio-container {
     background: 
-        radial-gradient(circle at 15% 50%, rgba(236, 72, 153, 0.35), transparent 50%),
-        radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.35), transparent 50%),
-        radial-gradient(circle at 50% 90%, rgba(139, 92, 246, 0.35), transparent 50%),
+        radial-gradient(circle at 15% 50%, rgba(236, 72, 153, 0.40), transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.40), transparent 50%),
+        radial-gradient(circle at 50% 90%, rgba(139, 92, 246, 0.40), transparent 50%),
         linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
     background-attachment: fixed !important;
     min-height: 100vh !important;
@@ -350,165 +347,183 @@ html, body, grad-app, .gradio-container {
 
 .gradio-container {
     padding: 30px !important;
-    color: #ffffff !important;
 }
 
-/* Force standard structural component rows/columns to default transparent */
-.gradio-container div[class*="row"], 
-.gradio-container div[class*="column"],
-.gradio-container div[class*="group"],
-.gradio-container div[class*="tabs"],
-.gradio-container .gr-row,
-.gradio-container .gr-column,
+/* 1. STRUCTURAL CLEANUP - ELIMINATES STACKED BACKDROP LAYERS */
+.gradio-container .block,
+.gradio-container .tabs,
+.gradio-container .tabitem,
+.gradio-container .group,
+.gradio-container .gr-group,
 .gradio-container div[class*="svelte-"] {
-    background-color: transparent !important;
     background: transparent !important;
-    border-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Ensure raw rows/columns don't carry accidental background styles */
+.gradio-container .row, 
+.gradio-container .column,
+.gradio-container div[class*="row"],
+.gradio-container div[class*="column"] {
+    background: transparent !important;
+    border: none !important;
     box-shadow: none !important;
 }
 
-/* Standard baseline layout flex overrides from authorization system */
-.gradio-container div[class*="row"], .gradio-container .gr-row {
+/* 2. BRIGHTER GLASSFIELDS - REMOVES HARSH DARK TEXT BOX BLOCKS */
+.gradio-container input, 
+.gradio-container textarea, 
+.gradio-container select,
+.gradio-container div[class*="token-input"],
+.gradio-container .tabitem,
+.gradio-container fieldset,
+.gradio-container .box,
+.gradio-container div[class*="input"] {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    background: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+    font-size: 1rem !important;
+    border-radius: 10px !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Brighten radio input choices blocks */
+.gradio-container label[class*="wrapper"], 
+.gradio-container .form .dark {
+    background-color: rgba(255, 255, 255, 0.14) !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+}
+
+.gradio-container input:focus, 
+.gradio-container textarea:focus {
+    border-color: rgba(236, 72, 153, 0.7) !important;
+    background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* 3. FLUID SINGLE-PANEL MAIN CARDS (BLURS TO GRADIENT SMOOTHLY) */
+.control-settings-card, .modify-panel-card {
+    background: rgba(255, 255, 255, 0.05) !important; 
+    backdrop-filter: blur(24px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 30px 60px 0 rgba(0, 0, 0, 0.3) !important;
+    padding: 24px !important;
+    margin-bottom: 20px !important;
+}
+
+/* 4. TARGETING THE EXPLICIT OUTPUT GALLERY CARD CLASS */
+.gradio-container .output-gallery-card {
+    background: rgba(255, 255, 255, 0.04) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 2px dashed rgba(255, 255, 255, 0.25) !important; /* <--- THIS LINE ADDS THE BORDER */
+    border-radius: 20px !important;
+    padding: 24px !important;
+    margin-bottom: 25px !important;
+    min-height: 440px !important;
+    box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.3) !important;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.gradio-container .output-gallery-card .preview,
+.gradio-container .output-gallery-card div[class*="empty"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* 5. LABELS AND TEXT ACCENTS */
+.gradio-container label span, 
+.gradio-container .text-sm,
+.gradio-container p {
+    color: #f1f5f9 !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 6. PRIMARY INTERACTIVE BUTTON */
+.button-row {
     display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    align-items: flex-start !important;
-    justify-content: center !important;
+    justify-content: center !important; 
     width: 100% !important;
-    gap: 32px !important;
+    margin-top: 15px !important;
 }
 
-/* ============================================================
-   2. SHADING CONTENT MODULES (DARK BLUR GLASS EFFECT)
-============================================================ */
-/* Applies your premium blur glass panel to control block groups */
-.dashboard-glass-panel,
-.gradio-container div[class*="group"].dashboard-glass-panel,
-.gradio-container div.group {
-    background: rgba(255, 255, 255, 0.04) !important; 
-    backdrop-filter: blur(28px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 20px !important;
-    box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.45) !important;
-    padding: 24px !important;
-    margin-bottom: 20px !important;
-}
-
-/* Shading dark blur variant background wrapper specifically tailored for galleries */
-.gradio-container div[class*="gallery"] {
-    background: rgba(0, 0, 0, 0.35) !important;
-    border: 1px solid rgba(255, 255, 255, 0.10) !important;
-    border-radius: 20px !important;
-    padding: 20px !important;
-}
-
-/* Isolate variation counter layout profile width footprint */
-#short_counter_box {
-    max-width: 220px !important;
-}
-
-/* ============================================================
-   3. SHADING CONTENT MODULES (DARK BLUR GLASS EFFECT)
-============================================================ */
-control-settings-card {
-    background: rgba(255, 255, 255, 0.04) !important; 
-    backdrop-filter: blur(28px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 20px !important;
-    box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.45) !important;
-    padding: 24px !important;
-    margin-bottom: 20px !important;
-    
-    /* ADD THESE TWO LINES TO FORCE RE-STACKING VERTICALLY */
-    display: flex !important;
-    flex-direction: column !important; 
-}
-
-/* ============================================================
-   4. TEXT FIELDS, SLIDERS & FIELD LABEL LABELS
-============================================================ */
-:root, .gradio-container {
-    --block-background-fill: rgba(0, 0, 0, 0.4) !important;
-    --block-border-color: rgba(255, 255, 255, 0.15) !important;
-    --input-background-fill: rgba(0, 0, 0, 0.5) !important;
-    --input-border-color: rgba(255, 255, 255, 0.15) !important;
-    --body-text-color: #ffffff !important;
-    --body-text-color-subdued: rgba(255, 255, 255, 0.6) !important;
-    --block-label-text-color: #ffffff !important;
-    --slider-color: #ec4899 !important;
-}
-
-.gradio-container h1, .gradio-container h2, .gradio-container h3, 
-.gradio-container .prose h2, .gradio-container div[class*="markdown"] h2 {
-    color: #ffffff !important;
-    font-weight: 800 !important;
-    margin-bottom: 12px !important;
-}
-
-.gradio-container label span, .gradio-container .block-label {
-    color: #ffffff !important;
-    font-weight: 700 !important;
-    font-size: 14px !important;
-}
-
-input, textarea, select {
-    background: rgba(0, 0, 0, 0.5) !important; 
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    border-radius: 8px !important;
-    color: #ffffff !important;
-    padding: 10px 14px !important;
-}
-
-input::placeholder, textarea::placeholder {
-    color: rgba(255, 255, 255, 0.35) !important;
-}
-
-/* Custom Radio selector choice pill overrides */
-.gradio-container .gr-radio-wrapper, .gradio-container label[class*="radio"] {
-    background: rgba(0, 0, 0, 0.3) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
-    padding: 6px 12px !important;
-    border-radius: 6px !important;
-}
-
-/* ============================================================
-   5. ACTION PIPELINE EMISSION BUTTON GRADIENTS
-============================================================ */
 .gradio-container button.primary, 
-.gradio-container button[class*="primary"],
-.execute-pipeline-btn {
+.gradio-container button[class*="primary"] {
     background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
-    background-image: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
     color: #ffffff !important;
     border: none !important;
     font-weight: 700 !important;
-    border-radius: 8px !important;
-    padding: 12px 24px !important;
+    border-radius: 12px !important;
+    padding: 14px 36px !important;
     cursor: pointer !important;
-    transition: all 0.2s ease-in-out !important;
-    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3) !important;
+    max-width: 260px !important;
+    width: 100% !important; 
+    display: block !important;
+    margin: 0 auto !important; 
+    box-shadow: 0 8px 20px rgba(236, 72, 153, 0.4) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-.gradio-container button.primary:hover, 
-.gradio-container button[class*="primary"]:hover,
-.execute-pipeline-btn:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5) !important;
+.gradio-container button.primary:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 12px 24px rgba(236, 72, 153, 0.55) !important;
 }
 
-footer { display: none !important; opacity: 0 !important; visibility: hidden !important; }
+/* Update these rules to specifically target the children of your radio group */
+
+/* 1. Style the container itself if needed */
+#mode_radio_group {
+    background: none !important;
+    border: none !important;
+    border-radius: none !important;
+    padding: none !important;
+}
+
+/* 2. Style the individual label wrappers inside your group */
+#mode_radio_group label {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+/* 3. Style the selected state specifically */
+#mode_radio_group label.selected {
+    background: rgba(236, 72, 153, 0.4) !important;
+    border: 1px solid rgba(236, 72, 153, 0.8) !important;
+    font-weight: bold !important;
+}
+footer { display: none !important; }
 """
 
 def update_ui(mode_selection):
     if mode_selection == "Sketch to Image":
-        return gr.update(visible=True), gr.update(visible=True), gr.update(interactive=True), gr.update(label="Prompt (Guide your sketch details)")
+        return (
+            gr.update(visible=True),      # sketch_inputs
+            gr.update(visible=True),      # count_slider
+            gr.update(interactive=True, label="Prompt (Guide your sketch details)")
+        )
     elif mode_selection == "Fantasy Images":
-        return gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True), gr.update(label="Core Idea (Unique environmental variations will match this)")
-    else:
-        return gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True), gr.update(label="Prompt (Describe the image you want to generate)")
+        return (
+            gr.update(visible=False),
+            gr.update(visible=True),      # keep counter visible
+            gr.update(interactive=True, label="Core Idea (Unique environmental variations will match this)")
+        )
+    else:  # Text to Image
+        return (
+            gr.update(visible=False),
+            gr.update(visible=True),      # keep counter visible
+            gr.update(interactive=True, label="Prompt (Describe the image you want to generate)")
+        )
 
 def create_generator_ui():
     original_image_backup = gr.State(None)
@@ -518,51 +533,62 @@ def create_generator_ui():
 
     with gr.Tabs():
         with gr.TabItem("Studio Workspace"):
-            with gr.Group() as studio_container:
-                # Top Row: Gallery on Left, Modification Panel on Right
+            with gr.Row():
+                with gr.Column(scale=4):
+                    #processed_preview = gr.Image(label="Processed Edge Map Preview", type="filepath", visible=False)
+                    output_gallery = gr.Gallery(label="Generated Output Images", columns=4, height="auto", type="filepath", elem_classes=["output-gallery-card"])
+                
+                with gr.Column(scale=2):
+                    with gr.Group(visible=False, elem_classes=["modify-panel-card"]) as modify_panel:
+                        gr.Markdown("### 🛠️ Modify Workspace")
+                        selected_preview = gr.Image(label="Target Image", type="filepath", interactive=False)
+                        with gr.Row():
+                            reset_btn = gr.Button("🔄 Revert", size="sm", variant="secondary")
+                            save_favorite_btn = gr.Button("💖 Save", size="sm", variant="primary")
+                        custom_filename_input = gr.Textbox(label="Custom Name", placeholder="filename...", max_lines=1)
+                        modify_input_prompt = gr.Textbox(label="Modifications", placeholder="e.g., 'deep red water'")
+                        strength_control = gr.Slider(minimum=0.10, maximum=0.90, value=0.45, step=0.05, label="Strength")
+                        submit_modification_btn = gr.Button("Apply", variant="secondary")
+                        modification_status = gr.HTML("")
+
+            # Bottom Controls Card
+            with gr.Group(elem_classes="control-settings-card"):
                 with gr.Row():
-                    with gr.Column(scale=3):
-                        processed_preview = gr.Image(label="Processed Edge Map Preview (Sketch mode only)", type="filepath", visible=False)
-                        output_gallery = gr.Gallery(label="Generated Output Images (Click any photo below to modify it)", columns=4, rows=None, object_fit="contain", height="auto", type="filepath")
-                    
-                    with gr.Column(scale=3):
-                        with gr.Group(visible=False) as modify_panel:
-                            gr.Markdown("### 🛠️ Modify Selected Variant Workspace")
-                            selected_preview = gr.Image(label="Target Workspace Image", type="filepath", interactive=False)
-                            
-                            with gr.Row():
-                                reset_btn = gr.Button("🔄 Revert Base", size="sm", variant="secondary")
-                                save_favorite_btn = gr.Button("💖 Save to Favorites", size="sm", variant="primary")
-                            
-                            custom_filename_input = gr.Textbox(label="Custom Save Name (Optional)", placeholder="e.g., retro_futuristic_car", max_lines=1)
-                            modify_input_prompt = gr.Textbox(label="What elements or changes would you like to add?", placeholder="e.g., 'deep red water'")
-                            strength_control = gr.Slider(minimum=0.10, maximum=0.90, value=0.45, step=0.05, label="Transformation Strength")
-                            submit_modification_btn = gr.Button("Apply Workspace Prompt Modifications", variant="secondary")
-                            modification_status = gr.HTML("")
-
-                # Bottom Card: Vertically Stacked Controls (This fixes the layout squishing!)
-                with gr.Column(elem_classes="control-settings-card"):
-                    mode = gr.Radio(choices=["Text to Image", "Sketch to Image", "Fantasy Images"], value="Text to Image", label="1. Choose Your Generation Mode")
-                    
-                    # Bound maximum width locally via Gradio native attributes to prevent giant scaling
-                    count_slider = gr.Number(value=1, minimum=1, maximum=100, precision=0, label="2. Number of Style Variations", interactive=True, elem_id="short_counter_box", min_width=120)
-                    
-                    prompt = gr.Textbox(value="", label="Prompt (Describe the image you want to generate)", lines=3)
-
-                    with gr.Group(visible=False) as sketch_inputs:
-                        sketch_img = gr.Image(type="pil", label="Upload or Draw Sketch", sources=["upload", "clipboard"])
-
-                    generate_btn = gr.Button("Generate Image", variant="primary", elem_classes="execute-pipeline-btn")
-                    status_message = gr.HTML("")
+                    # Right side column
+                    with gr.Column(scale=2):
+                        with gr.Row():
+                            with gr.Column(scale=2):
+                                mode = gr.Radio(choices=["Text to Image", "Sketch to Image", "Fantasy Images"], value="Text to Image", label="1. Choose Your Generation Mode", elem_id="mode_radio_group", interactive=True)
+                            with gr.Column(scale=1, min_width=150):
+                                count_slider = gr.Number(value=1, minimum=1, maximum=100, precision=0, label="2. Number of Style Variations", interactive=True, elem_id="short_counter_box")
+                       
+                        # Row containing prompt
+                        with gr.Row():
+                            with gr.Column(scale=3):
+                                prompt = gr.Textbox(value="", label="Prompt (Describe the image you want to generate)", lines=4)
+                        
+                        # Row containing generate button
+                        generate_btn = gr.Button(
+                                    "Generate Image", 
+                                    variant="primary", 
+                                    elem_classes=["button-row"], # Your existing shared class
+                                    elem_id="generate-btn-id"    # The new unique ID for centering
+                                )
+                             # Left side column
+                    with gr.Column(scale=1, min_width=300):
+                        with gr.Group(visible=False) as sketch_inputs:
+                            sketch_img = gr.Image(type="pil", label="Upload or Draw Sketch", sources=["upload", "clipboard"], height=320, elem_id="sketch_input_box")
+                       
+                status_message = gr.HTML("")
 
         with gr.TabItem("Saved Favorites Scrapbook"):
-            with gr.Group():
-                gr.Markdown("### 🌟 Saved Favorites Gallery")
-                search_bar = gr.Textbox(label="🔍 Filter Favorites by Name", placeholder="Type to search...", max_lines=1)
-                saved_gallery = gr.Gallery(elem_id="saved_favorites_gallery", label="Your Collected Artifact Scrapbook", columns=6, rows=None, object_fit="contain", height="auto", type="filepath", visible=False)
+        
+            gr.Markdown("### 🌟 Saved Favorites Gallery")
+            search_bar = gr.Textbox(label="🔍 Filter Favorites by Name", placeholder="Type to search...", max_lines=1)
+            saved_gallery = gr.Gallery(elem_id="saved_favorites_gallery", label="Your Collected Artifact Scrapbook", columns=6, type="filepath", visible=False)
 
     return {
-        "processed_preview": processed_preview, "output_gallery": output_gallery, "modify_panel": modify_panel, 
+        "output_gallery": output_gallery, "modify_panel": modify_panel, 
         "selected_preview": selected_preview, "modify_input_prompt": modify_input_prompt, "strength_control": strength_control, 
         "submit_modification_btn": submit_modification_btn, "modification_status": modification_status, "mode": mode, 
         "count_slider": count_slider, "prompt": prompt, "sketch_inputs": sketch_inputs, "sketch_img": sketch_img, 
@@ -575,8 +601,17 @@ if __name__ == "__main__":
     with gr.Blocks(css=GENERATOR_CSS) as demo:
         ui = create_generator_ui()
         ui["search_bar"].change(fn=filter_favorites, inputs=[ui["search_bar"], ui["favorites_cache"]], outputs=[ui["saved_gallery"]])
-        ui["mode"].change(fn=update_ui, inputs=ui["mode"], outputs=[ui["sketch_inputs"], ui["processed_preview"], ui["count_slider"], ui["prompt"]])
+        ui["mode"].change(fn=update_ui, inputs=ui["mode"], outputs=[ui["sketch_inputs"], ui["count_slider"], ui["prompt"]])
         ui["generate_btn"].click(fn=set_processing_notice, inputs=None, outputs=[ui["status_message"], ui["modify_panel"]]).then(
-            fn=generate, inputs=[ui["mode"], ui["count_slider"], ui["sketch_img"], ui["prompt"]], outputs=[ui["processed_preview"], ui["output_gallery"], ui["status_message"], gr.State([])]
+            fn=generate, inputs=[ui["mode"], ui["count_slider"], ui["sketch_img"], ui["prompt"]], outputs=[ui["output_gallery"], ui["status_message"], gr.State([])]
         )
+        
+        # --- FORCE DARK MODE ON INITIAL DASHBOARD LOAD ---
+        demo.load(
+            fn=None,
+            inputs=None,
+            outputs=None,
+            js="() => { document.documentElement.classList.add('dark'); }"
+        )
+
     demo.queue().launch()
