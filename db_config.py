@@ -506,26 +506,26 @@ def create_login_ui():
         register_btn, register_status, reg_show_pass
     )
 
-# --- APP MOUNT ---
-with gr.Blocks(css=LOGIN_CSS) as demo:
-    (
-        login_user_input, login_pass, login_btn, login_status,
-        reg_user, reg_email, reg_pass, repeat_password,
-        register_btn, register_status, reg_show_pass
-    ) = create_login_ui()
+# # --- APP MOUNT ---
+# with gr.Blocks(css=LOGIN_CSS) as demo:
+#     (
+#         login_user_input, login_pass, login_btn, login_status,
+#         reg_user, reg_email, reg_pass, repeat_password,
+#         register_btn, register_status, reg_show_pass
+#     ) = create_login_ui()
     
-    register_btn.click(
-        fn=save_user,
-        inputs=[reg_user, reg_email, reg_pass, repeat_password],
-        outputs=[register_status, gr.State()]
-    )
+#     register_btn.click(
+#         fn=save_user,
+#         inputs=[reg_user, reg_email, reg_pass, repeat_password],
+#         outputs=[register_status, gr.State()]
+#     )
     
-    login_btn.click(
-        fn=login_user,
-        inputs=[login_user_input, login_pass],
-        outputs=[login_status, gr.State()]
-    )
+#     login_btn.click(
+#         fn=login_user,
+#         inputs=[login_user_input, login_pass],
+#         outputs=[login_status, gr.State()]
+#     )
 
-if __name__ == "__main__":
-    init_db()
-    demo.launch(share=True)
+# if __name__ == "__main__":
+#     init_db()
+#     demo.launch(share=True)

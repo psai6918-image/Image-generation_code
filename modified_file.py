@@ -47,18 +47,14 @@ if not os.path.exists(CSV_LOG_FILE):
 print(f"Loading Models on {device} ({dtype})...")
 BASE_MODEL_ID = "runwayml/stable-diffusion-v1-5"
 
-# Load the core shared components FIRST
 controlnet = ControlNetModel.from_pretrained(
     "lllyasviel/sd-controlnet-canny", torch_dtype=dtype
 )
 
-# Pipe 1: Load Text to Image completely from scratch
 pipe_text2img = StableDiffusionPipeline.from_pretrained(
     BASE_MODEL_ID, torch_dtype=dtype, safety_checker=None, requires_safety_checker=False
 )
 
-# CRITICAL FIX: Extract components directly from Pipe 1 to build Pipe 2 and Pipe 3.
-# This prevents duplicating 8+ Gigabytes of weights in your RAM/VRAM!
 shared_components = pipe_text2img.components
 
 pipe_sketch2img = StableDiffusionControlNetPipeline(
@@ -70,7 +66,6 @@ pipe_img2img = StableDiffusionImg2ImgPipeline(
     **shared_components
 )
 
-# Push everything directly onto the GPU hardware
 pipe_text2img.to(device)
 pipe_sketch2img.to(device)
 pipe_img2img.to(device)
@@ -143,7 +138,6 @@ def generate(mode, count_selection, sketch_img, base_prompt, progress=gr.Progres
     generated_images = []
     saved_paths = []
 
-    # DOUBLE-CHECK DEVICE VALIDITY BEFORE STARTING RENDERS
     current_pipe = pipe_sketch2img if mode == "Sketch to Image" else pipe_text2img
     if device == "cuda" and str(current_pipe.device) == "cpu":
         current_pipe.to("cuda")
@@ -341,72 +335,182 @@ def filter_favorites(query, current_favorites):
 
 # --- 6. GRADIO INTERFACE CONFIGURATION & CUSTOM STYLE RULES ---
 GENERATOR_CSS = """
-.gradio-container, .gradio-row, .gradio-column {
-    height: auto !important;
+/* ============================================================
+   1. GLOBAL CANVAS & VIBRANT BACKGROUND BACKDROP
+============================================================ */
+html, body, grad-app, .gradio-container {
+    background: 
+        radial-gradient(circle at 15% 50%, rgba(236, 72, 153, 0.35), transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.35), transparent 50%),
+        radial-gradient(circle at 50% 90%, rgba(139, 92, 246, 0.35), transparent 50%),
+        linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
+    background-attachment: fixed !important;
+    min-height: 100vh !important;
 }
-.gradio-container .selected-image img, 
-.gradio-container img {
-    transform: rotate(0deg) !important;
-    max-height: none !important;
+
+.gradio-container {
+    padding: 30px !important;
+    color: #ffffff !important;
+}
+
+/* Force standard structural component rows/columns to default transparent */
+.gradio-container div[class*="row"], 
+.gradio-container div[class*="column"],
+.gradio-container div[class*="group"],
+.gradio-container div[class*="tabs"],
+.gradio-container .gr-row,
+.gradio-container .gr-column,
+.gradio-container div[class*="svelte-"] {
+    background-color: transparent !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Standard baseline layout flex overrides from authorization system */
+.gradio-container div[class*="row"], .gradio-container .gr-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
     width: 100% !important;
-    height: auto !important;
-    object-fit: contain !important;
+    gap: 32px !important;
 }
-#saved_favorites_gallery img {
-    max-height: 180px !important;
-    max-width: 180px !important;
-    width: auto !important;
-    height: auto !important;
-    margin: 0 auto !important;
-    object-fit: contain !important;
+
+/* ============================================================
+   2. SHADING CONTENT MODULES (DARK BLUR GLASS EFFECT)
+============================================================ */
+/* Applies your premium blur glass panel to control block groups */
+.dashboard-glass-panel,
+.gradio-container div[class*="group"].dashboard-glass-panel,
+.gradio-container div.group {
+    background: rgba(255, 255, 255, 0.04) !important; 
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.45) !important;
+    padding: 24px !important;
+    margin-bottom: 20px !important;
+}
+
+/* Shading dark blur variant background wrapper specifically tailored for galleries */
+.gradio-container div[class*="gallery"] {
+    background: rgba(0, 0, 0, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
+    border-radius: 20px !important;
+    padding: 20px !important;
+}
+
+/* Isolate variation counter layout profile width footprint */
+#short_counter_box {
+    max-width: 220px !important;
+}
+
+/* ============================================================
+   3. SHADING CONTENT MODULES (DARK BLUR GLASS EFFECT)
+============================================================ */
+control-settings-card {
+    background: rgba(255, 255, 255, 0.04) !important; 
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.45) !important;
+    padding: 24px !important;
+    margin-bottom: 20px !important;
+    
+    /* ADD THESE TWO LINES TO FORCE RE-STACKING VERTICALLY */
+    display: flex !important;
+    flex-direction: column !important; 
+}
+
+/* ============================================================
+   4. TEXT FIELDS, SLIDERS & FIELD LABEL LABELS
+============================================================ */
+:root, .gradio-container {
+    --block-background-fill: rgba(0, 0, 0, 0.4) !important;
+    --block-border-color: rgba(255, 255, 255, 0.15) !important;
+    --input-background-fill: rgba(0, 0, 0, 0.5) !important;
+    --input-border-color: rgba(255, 255, 255, 0.15) !important;
+    --body-text-color: #ffffff !important;
+    --body-text-color-subdued: rgba(255, 255, 255, 0.6) !important;
+    --block-label-text-color: #ffffff !important;
+    --slider-color: #ec4899 !important;
+}
+
+.gradio-container h1, .gradio-container h2, .gradio-container h3, 
+.gradio-container .prose h2, .gradio-container div[class*="markdown"] h2 {
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    margin-bottom: 12px !important;
+}
+
+.gradio-container label span, .gradio-container .block-label {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+}
+
+input, textarea, select {
+    background: rgba(0, 0, 0, 0.5) !important; 
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 8px !important;
+    color: #ffffff !important;
+    padding: 10px 14px !important;
 }
-#saved_favorites_gallery .gallery-item {
-    background: transparent !important;
-    box-shadow: none !important;
-    padding: 4px !important;
+
+input::placeholder, textarea::placeholder {
+    color: rgba(255, 255, 255, 0.35) !important;
 }
-.prose.gradio-html, .gradio-html div {
-    background: transparent !important;
+
+/* Custom Radio selector choice pill overrides */
+.gradio-container .gr-radio-wrapper, .gradio-container label[class*="radio"] {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+}
+
+/* ============================================================
+   5. ACTION PIPELINE EMISSION BUTTON GRADIENTS
+============================================================ */
+.gradio-container button.primary, 
+.gradio-container button[class*="primary"],
+.execute-pipeline-btn {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
+    background-image: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
+    color: #ffffff !important;
     border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    padding: 12px 24px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-in-out !important;
+    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3) !important;
 }
-footer, .built-with, .prose a[href*="gradio.app"] {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
+
+.gradio-container button.primary:hover, 
+.gradio-container button[class*="primary"]:hover,
+.execute-pipeline-btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5) !important;
 }
+
+footer { display: none !important; opacity: 0 !important; visibility: hidden !important; }
 """
 
 def update_ui(mode_selection):
     if mode_selection == "Sketch to Image":
-        return (
-            gr.update(visible=True), 
-            gr.update(visible=True), 
-            gr.update(interactive=True),
-            gr.update(label="Prompt (Guide your sketch details)")
-        )
+        return gr.update(visible=True), gr.update(visible=True), gr.update(interactive=True), gr.update(label="Prompt (Guide your sketch details)")
     elif mode_selection == "Fantasy Images":
-        return (
-            gr.update(visible=False), 
-            gr.update(visible=False), 
-            gr.update(interactive=True),
-            gr.update(label="Core Idea (Unique environmental variations will match this)")
-        )
+        return gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True), gr.update(label="Core Idea (Unique environmental variations will match this)")
     else:
-        return (
-            gr.update(visible=False), 
-            gr.update(visible=False), 
-            gr.update(interactive=True),
-            gr.update(label="Prompt (Describe the image you want to generate)")
-        )
+        return gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True), gr.update(label="Prompt (Describe the image you want to generate)")
 
-with gr.Blocks(title="AI Multimode Image Studio") as demo:
-    generated_cache = gr.State([])
+def create_generator_ui():
     original_image_backup = gr.State(None)
     favorites_cache = gr.State([]) 
     
@@ -415,12 +519,13 @@ with gr.Blocks(title="AI Multimode Image Studio") as demo:
     with gr.Tabs():
         with gr.TabItem("Studio Workspace"):
             with gr.Group() as studio_container:
+                # Top Row: Gallery on Left, Modification Panel on Right
                 with gr.Row():
-                    with gr.Column(scale=2):
+                    with gr.Column(scale=3):
                         processed_preview = gr.Image(label="Processed Edge Map Preview (Sketch mode only)", type="filepath", visible=False)
                         output_gallery = gr.Gallery(label="Generated Output Images (Click any photo below to modify it)", columns=4, rows=None, object_fit="contain", height="auto", type="filepath")
                     
-                    with gr.Column(scale=1):
+                    with gr.Column(scale=3):
                         with gr.Group(visible=False) as modify_panel:
                             gr.Markdown("### 🛠️ Modify Selected Variant Workspace")
                             selected_preview = gr.Image(label="Target Workspace Image", type="filepath", interactive=False)
@@ -429,127 +534,49 @@ with gr.Blocks(title="AI Multimode Image Studio") as demo:
                                 reset_btn = gr.Button("🔄 Revert Base", size="sm", variant="secondary")
                                 save_favorite_btn = gr.Button("💖 Save to Favorites", size="sm", variant="primary")
                             
-                            custom_filename_input = gr.Textbox(
-                                label="Custom Save Name (Optional)", 
-                                placeholder="e.g., retro_futuristic_car (leaves empty for timestamp)",
-                                max_lines=1
-                            )
-                            
-                            modify_input_prompt = gr.Textbox(
-                                label="What elements or changes would you like to add?", 
-                                placeholder="e.g., 'deep red water, bloody river cascade'"
-                            )
-                            
-                            strength_control = gr.Slider(
-                                minimum=0.10, maximum=0.90, value=0.45, step=0.05,
-                                label="Transformation Strength (Lower preserves shapes, Higher injects more new elements)"
-                            )
+                            custom_filename_input = gr.Textbox(label="Custom Save Name (Optional)", placeholder="e.g., retro_futuristic_car", max_lines=1)
+                            modify_input_prompt = gr.Textbox(label="What elements or changes would you like to add?", placeholder="e.g., 'deep red water'")
+                            strength_control = gr.Slider(minimum=0.10, maximum=0.90, value=0.45, step=0.05, label="Transformation Strength")
                             submit_modification_btn = gr.Button("Apply Workspace Prompt Modifications", variant="secondary")
                             modification_status = gr.HTML("")
 
-                with gr.Row():
-                    with gr.Column(scale=1):
-                        mode = gr.Radio(
-                            choices=["Text to Image", "Sketch to Image", "Fantasy Images"],
-                            value="Text to Image",
-                            label="1. Choose Your Generation Mode"
-                        )
-                        
-                        count_slider = gr.Slider(
-                            minimum=1, 
-                            maximum=100, 
-                            value=1, 
-                            step=1, 
-                            label="2. Slider Selector: Number of Style Variations to Generate",
-                            interactive=True
-                        )
+                # Bottom Card: Vertically Stacked Controls (This fixes the layout squishing!)
+                with gr.Column(elem_classes="control-settings-card"):
+                    mode = gr.Radio(choices=["Text to Image", "Sketch to Image", "Fantasy Images"], value="Text to Image", label="1. Choose Your Generation Mode")
+                    
+                    # Bound maximum width locally via Gradio native attributes to prevent giant scaling
+                    count_slider = gr.Number(value=1, minimum=1, maximum=100, precision=0, label="2. Number of Style Variations", interactive=True, elem_id="short_counter_box", min_width=120)
+                    
+                    prompt = gr.Textbox(value="", label="Prompt (Describe the image you want to generate)", lines=3)
 
-                        prompt = gr.Textbox(
-                            value="",
-                            label="Prompt (Describe the image you want to generate)",
-                            lines=3
-                        )
+                    with gr.Group(visible=False) as sketch_inputs:
+                        sketch_img = gr.Image(type="pil", label="Upload or Draw Sketch", sources=["upload", "clipboard"])
 
-                        with gr.Group(visible=False) as sketch_inputs:
-                            sketch_img = gr.Image(type="pil", label="Upload or Draw Sketch", sources=["upload", "clipboard"])
-
-                        generate_btn = gr.Button("Execute Process Pipeline", variant="primary")
-                        status_message = gr.HTML("")
+                    generate_btn = gr.Button("Generate Image", variant="primary", elem_classes="execute-pipeline-btn")
+                    status_message = gr.HTML("")
 
         with gr.TabItem("Saved Favorites Scrapbook"):
             with gr.Group():
                 gr.Markdown("### 🌟 Saved Favorites Gallery")
-                gr.Markdown("Images you save inside the workspace module by pressing **💖 Save to Favorites** accumulate automatically below.")
-                
-                search_bar = gr.Textbox(
-                    label="🔍 Filter Favorites by Name", 
-                    placeholder="Type to search your saved assets instantly...",
-                    max_lines=1
-                )
-                
-                saved_gallery = gr.Gallery(
-                    elem_id="saved_favorites_gallery",
-                    label="Your Collected Artifact Scrapbook", 
-                    columns=6, 
-                    rows=None, 
-                    object_fit="contain", 
-                    height="auto", 
-                    type="filepath",
-                    visible=False
-                )
+                search_bar = gr.Textbox(label="🔍 Filter Favorites by Name", placeholder="Type to search...", max_lines=1)
+                saved_gallery = gr.Gallery(elem_id="saved_favorites_gallery", label="Your Collected Artifact Scrapbook", columns=6, rows=None, object_fit="contain", height="auto", type="filepath", visible=False)
 
-        # --- CONTROLLER HOOKS & WIRING ---
-        search_bar.change(
-            fn=filter_favorites,
-            inputs=[search_bar, favorites_cache],
-            outputs=[saved_gallery]
-        )
-
-        mode.change(
-            fn=update_ui, 
-            inputs=mode, 
-            outputs=[sketch_inputs, processed_preview, count_slider, prompt]
-        )
-
-        generate_btn.click(
-            fn=set_processing_notice,
-            inputs=None,
-            outputs=[status_message, modify_panel]
-        ).then(
-            fn=generate,
-            inputs=[mode, count_slider, sketch_img, prompt],
-            outputs=[processed_preview, output_gallery, status_message, generated_cache]
-        )
-
-        output_gallery.select(
-            fn=on_gallery_select,
-            inputs=[generated_cache],
-            outputs=[modify_panel, selected_preview, modification_status, original_image_backup]
-        )
-
-        reset_btn.click(
-            fn=reset_workspace_image,
-            inputs=[original_image_backup],
-            outputs=[selected_preview, modification_status]
-        )
-
-        save_favorite_btn.click(
-            fn=append_to_favorites,
-            inputs=[selected_preview, custom_filename_input, favorites_cache],
-            outputs=[favorites_cache, saved_gallery, modification_status]
-        )
-
-        submit_modification_btn.click(
-            fn=lambda: '<div style="color: #d97706; font-weight: bold;">⏳ Rendering modifications inside workspace window...</div>',
-            inputs=None,
-            outputs=[modification_status]
-        ).then(
-            fn=modify_selected_image,
-            inputs=[selected_preview, modify_input_prompt, strength_control, prompt],
-            outputs=[selected_preview, modification_status]
-        )
+    return {
+        "processed_preview": processed_preview, "output_gallery": output_gallery, "modify_panel": modify_panel, 
+        "selected_preview": selected_preview, "modify_input_prompt": modify_input_prompt, "strength_control": strength_control, 
+        "submit_modification_btn": submit_modification_btn, "modification_status": modification_status, "mode": mode, 
+        "count_slider": count_slider, "prompt": prompt, "sketch_inputs": sketch_inputs, "sketch_img": sketch_img, 
+        "generate_btn": generate_btn, "status_message": status_message, "search_bar": search_bar, "saved_gallery": saved_gallery, 
+        "reset_btn": reset_btn, "save_favorite_btn": save_favorite_btn, "custom_filename_input": custom_filename_input,
+        "original_image_backup": original_image_backup, "favorites_cache": favorites_cache
+    }
 
 if __name__ == "__main__":
-    demo.queue(default_concurrency_limit=1).launch(
-        share=True, 
-        server_name="0.0.0.0")
+    with gr.Blocks(css=GENERATOR_CSS) as demo:
+        ui = create_generator_ui()
+        ui["search_bar"].change(fn=filter_favorites, inputs=[ui["search_bar"], ui["favorites_cache"]], outputs=[ui["saved_gallery"]])
+        ui["mode"].change(fn=update_ui, inputs=ui["mode"], outputs=[ui["sketch_inputs"], ui["processed_preview"], ui["count_slider"], ui["prompt"]])
+        ui["generate_btn"].click(fn=set_processing_notice, inputs=None, outputs=[ui["status_message"], ui["modify_panel"]]).then(
+            fn=generate, inputs=[ui["mode"], ui["count_slider"], ui["sketch_img"], ui["prompt"]], outputs=[ui["processed_preview"], ui["output_gallery"], ui["status_message"], gr.State([])]
+        )
+    demo.queue().launch()
