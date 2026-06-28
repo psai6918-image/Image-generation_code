@@ -59,7 +59,7 @@ html, body, grad-app, .gradio-container {
     gap: 32px !important;
 }
 
-/* Constrains form card parent layout from stretching too wide on massive screens */
+/* Layout panel maximum boundary constraint definitions */
 .gradio-container div[class*="dark-auth-panel"],
 .gradio-container .dark-auth-panel {
     max-width: 460px !important;
@@ -267,7 +267,7 @@ input::placeholder, textarea::placeholder {
     gap: 0px !important;
 }
 
-/* CUSTOM LINK STYLING FOR NATIVE GRADIO BUTTON */
+/* CUSTOM LINK STYLING FOR FORGOT PASSWORD BUTTON */
 .forgot-password-btn {
     background: transparent !important;
     border: none !important;
@@ -417,12 +417,21 @@ def login_user(username_or_email, password):
             connection.close()
 
 
-# --- PASSWORD RECOVERY ENGINE ---
-def process_password_reset(username_or_email):
-    """Verifies user identifier exists. If true, exposes the hidden reset form elements."""
+# --- PASSWORD RECOVERY ENGINES ---
+def direct_forgot_password_trigger(username_or_email):
+    """
+    Directly triggered when user clicks 'Forgot Password?'. 
+    Reads the value from the existing sign-in screen username field.
+    """
     target = username_or_email.strip()
     if not target:
-        return "⚠️ Please enter your Username or Email address.", gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        # Error stays on the Sign In view so they know they need to enter a value first
+        return (
+            "⚠️ Please enter your Username or Email address in the text box above before clicking Forgot Password.", 
+            gr.update(), # Keep forgot tab hidden
+            gr.update(), # Don't shift current tab
+            gr.update(), gr.update(), gr.update() # Reset components invisible
+        )
         
     connection = None
     try:
@@ -437,25 +446,27 @@ def process_password_reset(username_or_email):
                 matched_username = user[0]
                 return (
                     f"✅ Account found for '{matched_username}'. Please choose your new password below.",
-                    gr.update(visible=False), 
-                    gr.update(visible=False), 
-                    gr.update(visible=True),  
-                    gr.update(visible=True),  
-                    gr.update(visible=True),  
-                    gr.update(visible=True)   
+                    gr.update(visible=True),               # Make Password Reset Tab Visible
+                    gr.update(selected="forgot_tab"),       # Force switch view directly to it
+                    gr.update(visible=True),                # Show password field
+                    gr.update(visible=True),                # Show repeat password field
+                    gr.update(visible=True)                 # Show submit change button
                 )
             else:
-                return "❌ No profile found matching that information.", gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+                return (
+                    "❌ No profile found matching that Username or Email.", 
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+                )
     except Error as e:
-        return f"❌ Database operational fault: {e}", gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        return f"❌ Database operational fault: {e}", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
     finally:
         if connection and connection.is_connected():
             cursor.close()
             connection.close()
 
 
-def commit_new_password(username_or_email, new_pass, repeat_pass, logout_everywhere):
-    """Validates the input inputs and updates the credential string in MySQL database."""
+def commit_new_password(username_or_email, new_pass, repeat_pass):
+    """Commits the new cryptographic string into the MySQL table data schema."""
     target = username_or_email.strip()
     new_pass = new_pass.strip()
     repeat_pass = repeat_pass.strip()
@@ -477,8 +488,6 @@ def commit_new_password(username_or_email, new_pass, repeat_pass, logout_everywh
             cursor.execute(update_query, (secure_password_string, target, target))
             connection.commit()
             
-            if logout_everywhere:
-                return "🎉 Password updated! Active sessions on all other systems have been successfully closed."
             return "🎉 Password updated successfully! You can now switch back to the Sign In tab."
     except Error as e:
         return f"❌ Failed writing update to database: {e}"
@@ -552,22 +561,13 @@ def create_login_ui():
                         
                         forgot_link_btn = gr.Button("Forgot Password?", elem_classes=["forgot-password-btn"])
 
-                    # --- TAB 3: Forgot Password ---
+                    # --- TAB 3: Forgot Password (Dynamically populated from Sign In field) ---
                     with gr.Tab("Password Reset", id="forgot_tab", visible=False) as forgot_tab:
                         gr.Markdown("## Recover Account")
                         
-                        forgot_input = gr.Textbox(label="Username or Email Address", placeholder="Enter your username or email address", max_lines=1, visible=True)
-                        forgot_submit_btn = gr.Button("Send Recovery Request", variant="primary", visible=True)
-                        
+                        # Step 2 Fields - Directly shown once account verification matches field data
                         reset_new_password = gr.Textbox(label="New Password", placeholder="Enter a new password", type="password", max_lines=1, visible=False)
                         reset_repeat_password = gr.Textbox(label="Confirm New Password", placeholder="Repeat your new password", type="password", max_lines=1, visible=False)
-                        
-                        reset_logout_everywhere = gr.Checkbox(
-                            label="Log out everywhere else to make sure that no one else can still access your account", 
-                            value=False, 
-                            interactive=True, 
-                            visible=False
-                        )
                         
                         reset_save_btn = gr.Button("Update Password", variant="primary", visible=False)
                         
@@ -597,8 +597,8 @@ def create_login_ui():
         login_user_input, login_pass, login_btn, login_status,
         reg_user, reg_email, reg_pass, reg_repeat_pass,
         register_btn, register_status, reg_show_pass,
-        forgot_link_btn, forgot_tab, auth_tabs, forgot_input, forgot_submit_btn, forgot_status, back_to_signin_btn,
-        reset_new_password, reset_repeat_password, reset_logout_everywhere, reset_save_btn
+        forgot_link_btn, forgot_tab, auth_tabs, forgot_status, back_to_signin_btn,
+        reset_new_password, reset_repeat_password, reset_save_btn
     )
 
 # --- APP MOUNT ---
@@ -607,8 +607,8 @@ with gr.Blocks(css=LOGIN_CSS) as demo:
         login_user_input, login_pass, login_btn, login_status,
         reg_user, reg_email, reg_pass, repeat_password,
         register_btn, register_status, reg_show_pass,
-        forgot_link_btn, forgot_tab, auth_tabs, forgot_input, forgot_submit_btn, forgot_status, back_to_signin_btn,
-        reset_new_password, reset_repeat_password, reset_logout_everywhere, reset_save_btn
+        forgot_link_btn, forgot_tab, auth_tabs, forgot_status, back_to_signin_btn,
+        reset_new_password, reset_repeat_password, reset_save_btn
     ) = create_login_ui()
     
     register_btn.click(
@@ -623,39 +623,20 @@ with gr.Blocks(css=LOGIN_CSS) as demo:
         outputs=[login_status, gr.State()]
     )
 
-    # --- FORGOT PASSWORD EVENT HANDLERS ---
-    # 1. Clicking "Forgot Password?" reveals the tab, switches to it, and resets standard component visibility
+    # --- SIMPLIFIED FORGOT PASSWORD EVENT HANDLER ---
+    # Clicking "Forgot Password?" directly takes the inputs from the current Sign-In text field
     forgot_link_btn.click(
-        fn=lambda: (
-            gr.update(visible=True), 
-            gr.update(selected="forgot_tab"),   # ✅ Fixed unmatched parenthesis here
-            gr.update(visible=True, value=""), 
-            gr.update(visible=True),           
-            gr.update(visible=False, value=""),
-            gr.update(visible=False, value=""),
-            gr.update(visible=False, value=False), 
-            gr.update(visible=False),
-            gr.update(value="")                
-        ),
-        inputs=None,
-        outputs=[forgot_tab, auth_tabs, forgot_input, forgot_submit_btn, reset_new_password, reset_repeat_password, reset_logout_everywhere, reset_save_btn, forgot_status]
+        fn=direct_forgot_password_trigger,
+        inputs=[login_user_input], # Reads directly from your active Sign-In field!
+        outputs=[login_status, forgot_tab, auth_tabs, reset_new_password, reset_repeat_password, reset_save_btn]
     )
     
-    # 2. Clicking Send Recovery verification checks details and flips layout to modification fields
-    forgot_submit_btn.click(
-        fn=process_password_reset,
-        inputs=[forgot_input],
-        outputs=[forgot_status, forgot_input, forgot_submit_btn, reset_new_password, reset_repeat_password, reset_logout_everywhere, reset_save_btn]
-    )
-    
-    # 3. Final Step: Clicking Save change runs validation on parameters and updates the MySQL schema entry
     reset_save_btn.click(
         fn=commit_new_password,
-        inputs=[forgot_input, reset_new_password, reset_repeat_password, reset_logout_everywhere],
+        inputs=[login_user_input, reset_new_password, reset_repeat_password],
         outputs=[forgot_status]
     )
 
-    # 4. Clicking "Back to Sign In" switches back and conceals the tab
     back_to_signin_btn.click(
         fn=lambda: (gr.update(selected="signin_tab"), gr.update(visible=False)),
         inputs=None,
