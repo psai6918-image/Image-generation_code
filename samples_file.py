@@ -263,9 +263,9 @@ def append_to_favorites(target_img, custom_name, current_favorites):
 
         if source_path not in existing_paths:
             updated_favorites.append((source_path, display_title))
-            status = f'<div style="color: #4ade80; font-weight: bold; margin-top: 5px;">💖 Saved successfully as "{display_title}"! Check the Saved Matrix tab.</div>'
+            status = f'<div style="color: #4ade80; font-weight: bold; margin-top: 5px;">💖 Saved successfully as "{display_title}"! Check the Saved Images tab.</div>'
         else:
-            status = '<div style="color: #fbbf24; margin-top: 5px;">An image with this identical storage filename already exists inside your matrix.</div>'
+            status = '<div style="color: #fbbf24; margin-top: 5px;">An image with this identical storage filename already exists.</div>'
 
     except Exception as e:
         return current_favorites, gr.update(), f'<div style="color: #f87171;">Failed saving: {str(e)}</div>'
@@ -276,34 +276,248 @@ def set_processing_notice():
     return '<div style="text-align: center; width: 100%; font-weight: bold; color: #fbbf24; padding: 0; margin: 10px 0;">⏳ Processing Pipeline Initiated...</div>'
 
 def clear_workspace_preview():
-    # Helper to explicitly flush out panel artifacts instantly without tracking secondary pipeline progress metrics
     return None
 
-# --- 4. GRADIO UI DESIGN ---
 GENERATOR_CSS = """
 html, body, grad-app, .gradio-container {
-    background:
-        radial-gradient(circle at 15% 50%, rgba(236, 72, 153, 0.25), transparent 50%),
-        radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.25), transparent 50%),
-        linear-gradient(135deg, #0f172a 0%, #020617 100%) !important;
+    background: 
+        radial-gradient(circle at 15% 50%, rgba(236, 72, 153, 0.40), transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.40), transparent 50%),
+        radial-gradient(circle at 50% 90%, rgba(139, 92, 246, 0.40), transparent 50%),
+        linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
     background-attachment: fixed !important;
     min-height: 100vh !important;
 }
-.gradio-container { max-width: 100% !important; padding: 25px !important; }
-.control-settings-card, .modify-panel-card {
-    background: rgba(255, 255, 255, 0.05) !important;
-    backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 16px !important;
-    padding: 20px !important;
-    margin-bottom: 15px !important;
+
+.gradio-container {
+    padding: 30px !important;
 }
 
-.output-gallery-card {
-    background: rgba(255, 255, 255, 0.02) !important;
-    border: 1px dashed rgba(255, 255, 255, 0.15) !important;
-    border-radius: 16px !important;
-    padding: 15px !important;
+/* 1. STRUCTURAL CLEANUP - ELIMINATES STACKED BACKDROP LAYERS */
+.gradio-container .block,
+.gradio-container .tabs,
+.gradio-container .tabitem,
+.gradio-container .group,
+.gradio-container .gr-group,
+.gradio-container div[class*="svelte-"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Force Equal Columns and Vertical Stretching */
+.gradio-container .row, 
+.gradio-container div[class*="row"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: stretch !important;  /* Stretches side-by-side components equally down */
+}
+
+.gradio-container .column,
+.gradio-container div[class*="column"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Sketch to Image spacing and structural border recovery */
+.sketch-upload-wrapper {
+    margin-left: 24px !important;  /* Creates the separation gap from the left board */
+}
+
+.sketch-upload-wrapper .image-container {
+    border: 2px dashed rgba(255, 255, 255, 0.25) !important; /* Re-establishes a clean, noticeable border */
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* 2. BRIGHTER GLASSFIELDS */
+.gradio-container input, 
+.gradio-container textarea, 
+.gradio-container select,
+.gradio-container div[class*="token-input"],
+.gradio-container .tabitem,
+.gradio-container fieldset,
+.gradio-container .box,
+.gradio-container div[class*="input"] {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    background: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+    font-size: 1rem !important;
+    border-radius: 10px !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.gradio-container label[class*="wrapper"], 
+.gradio-container .form .dark {
+    background-color: rgba(255, 255, 255, 0.14) !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+}
+
+.gradio-container input:focus, 
+.gradio-container textarea:focus {
+    border-color: rgba(236, 72, 153, 0.7) !important;
+    background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* 3. FLUID SINGLE-PANEL MAIN CARDS WITH RESTORED TAB SPACING */
+.control-settings-card, .modify-panel-card {
+    background: rgba(255, 255, 255, 0.05) !important; 
+    backdrop-filter: blur(24px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 30px 60px 0 rgba(0, 0, 0, 0.3) !important;
+    padding: 24px !important;
+    margin-top: 35px !important;     /* FIXED: Added a robust top margin to isolate from headers */
+    margin-bottom: 20px !important;
+    flex-grow: 1 !important;  /* Pull structural box sizes cleanly to fill the gap */
+}
+
+/* 4. TARGETING THE EXPLICIT OUTPUT GALLERY CARD CLASS WITH RESTORED TAB SPACING */
+.gradio-container .output-gallery-card {
+    background: rgba(255, 255, 255, 0.04) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 2px dashed rgba(255, 255, 255, 0.25) !important;
+    border-radius: 20px !important;
+    padding: 24px !important;
+    margin-top: 35px !important;       /* FIXED: Generates breathing space between gallery canvas and tab borders */
+    margin-bottom: 20px !important; 
+    box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.3) !important;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+    
+    /* Forces the box structure itself to stretch down cleanly */
+    display: flex !important;
+    flex-direction: column !important;
+    flex-grow: 1 !important; 
+    height: calc(100% - 55px) !important; 
+}
+
+/* Forces inner Gradio gallery layers to absorb all newly stretched vertical room */
+.gradio-container .output-gallery-card > .grid-wrap,
+.gradio-container .output-gallery-card div[class*="gallery"] {
+    flex-grow: 1 !important;
+    height: 100% !important;
+}
+
+.output-gallery-card .upload-container,
+.output-gallery-card .grid-wrap div[class*="empty"],
+.output-gallery-card div[class*="upload"] {
+    display: none !important;
+}
+
+.gradio-container .output-gallery-card .preview,
+.gradio-container .output-gallery-card div[class*="empty"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* 5. LABELS AND TEXT ACCENTS (UPDATED FOR MAXIMUM CONTRAST) */
+.gradio-container label span, 
+.gradio-container .text-sm,
+.gradio-container p,
+.gradio-container span,
+.gradio-container label,
+.gradio-container .block-title {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 6. PRIMARY INTERACTIVE BUTTONS */
+.button-row {
+    display: flex !important;
+    justify-content: center !important; 
+    width: 100% !important;
+    margin-top: 15px !important;
+}
+
+.gradio-container button.primary, 
+.gradio-container button[class*="primary"] {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+    padding: 14px 36px !important;
+    cursor: pointer !important;
+    max-width: 260px !important;
+    width: 100% !important; 
+    display: block !important;
+    margin: 20px auto 0 auto !important;
+    box-shadow: 0 8px 20px rgba(236, 72, 153, 0.4) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.gradio-container button.primary:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 12px 24px rgba(236, 72, 153, 0.55) !important;
+}
+
+/* CUSTOM WORKSPACE EDITING BUTTONS */
+.apply-btn-style {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.apply-btn-style:hover {
+    background: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(236, 72, 153, 0.6) !important;
+    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3) !important;
+    transform: translateY(-1px);
+}
+
+.reset-btn-style {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #cbd5e1 !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+}
+
+.reset-btn-style:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+    border-color: rgba(56, 189, 248, 0.5) !important;
+    box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2) !important;
+    transform: translateY(-1px);
+}
+
+#mode_radio_group {
+    background: none !important;
+    border: none !important;
+}
+
+#mode_radio_group label {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+#mode_radio_group label.selected {
+    background: rgba(236, 72, 153, 0.4) !important;
+    border: 1px solid rgba(236, 72, 153, 0.8) !important;
+    font-weight: bold !important;
 }
 
 .fav-matrix-container .grid-container,
@@ -332,16 +546,23 @@ html, body, grad-app, .gradio-container {
     border-radius: 16px !important;
     padding: 20px !important;
     min-height: 500px !important;
+    margin-top: 35px !important;       /* FIXED: Gives matching spacing to the Saved Gallery tab */
 }
+
+.gallery-column {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
 .button-row { width: 100% !important; margin-top: 10px !important; }
 
-.reset-btn-style {
-    background-color: var(--button-secondary-background-fill) !important;
-    color: var(--button-secondary-text-color) !important;
-    border: var(--button-secondary-border) !important;
+.editing-buttons-row {
+    margin-top: 25px !important;
 }
-.reset-btn-style:hover {
-    background-color: var(--button-secondary-background-fill-hover) !important;
+
+.compact-number {
+    max-width: 140px !important;
+    width: 100% !important;
 }
 
 footer { display: none !important; }
@@ -349,13 +570,13 @@ footer { display: none !important; }
 
 def update_ui(mode_selection):
     if mode_selection == "Sketch to Image":
-        return gr.update(visible=True), gr.update(visible=True), gr.update(interactive=True, label="Prompt (Guide your sketch details)")
+        return gr.update(visible=True), gr.update(visible=True), gr.update(interactive=True, label="Upload your sketch and guide your sketch details")
     elif mode_selection == "Fantasy Images":
-        return gr.update(visible=False), gr.update(visible=True), gr.update(interactive=True, label="Core Idea (Unique environmental variations will match this)")
+        return gr.update(visible=False), gr.update(visible=True), gr.update(interactive=True, label="Unique environmental variations")
     else:
-        return gr.update(visible=False), gr.update(visible=True), gr.update(interactive=True, label="Prompt (Describe the image you want to generate)")
+        return gr.update(visible=False), gr.update(visible=True), gr.update(interactive=True, label="Describe the image you want to generate")
 
-with gr.Blocks(css=GENERATOR_CSS) as demo:
+def create_generator_ui():
     original_image_backup = gr.State(None)
     favorites_cache = gr.State([])
 
@@ -364,24 +585,24 @@ with gr.Blocks(css=GENERATOR_CSS) as demo:
     with gr.Tabs():
         with gr.TabItem("Studio Workspace"):
             with gr.Row():
-                with gr.Column(scale=5):
-                    output_gallery = gr.Gallery(show_label=False, columns=5, height="auto", type="filepath", elem_classes=["output-gallery-card"], interactive=True)
+                with gr.Column(scale=3, elem_classes=["gallery-column"]):
+                    output_gallery = gr.Gallery(show_label=False, columns=5, height="auto", type="filepath", elem_classes=["output-gallery-card"], interactive=False)
 
-                with gr.Column(scale=2):
+                with gr.Column(scale=3):
                     with gr.Group(visible=True, elem_classes=["modify-panel-card"]) as modify_panel:
                         gr.Markdown("### 🛠️ Workspace Editing Panel")
-                        selected_preview = gr.Image(label="Selected Image Preview", type="filepath", interactive=False)
+                        selected_preview = gr.Image(show_label=False, type="filepath", interactive=False)
 
                         modify_input_prompt = gr.Textbox(label="Prompt Modification", placeholder="Describe adjustments... e.g., 'wearing a red collar'")
-                        strength_control = gr.Slider(minimum=0.10, maximum=0.90, value=0.45, step=0.05, label="Transformation Strength")
+                        strength_control = gr.Number(minimum=0.10, maximum=0.90, value=0.45, label="Transformation Strength", info = "Lower values retain more of the original image; higher values apply more of the new prompt's influence.")
 
                         with gr.Row():
-                            submit_modification_btn = gr.Button("Apply Transformation", variant="secondary", size="sm")
-                            reset_original_btn = gr.Button("🔄 Reset to Original", variant="secondary", size="sm", elem_classes=["reset-btn-style"])
-
+                            with gr.Row(elem_classes=["editing-buttons-row"]):
+                                submit_modification_btn = gr.Button("Apply Changes", variant="secondary", size="sm", elem_classes=["apply-btn-style"])
+                                reset_original_btn = gr.Button("🔄 Reset to Original", variant="secondary", size="sm", elem_classes=["reset-btn-style"])
                         gr.Markdown("---")
-                        custom_filename_input = gr.Textbox(label="Save Asset As (Custom Name)", placeholder="Optional filename... e.g., cyber_dog_neon", lines=1)
-                        save_favorite_btn = gr.Button("💖 Save to Gallery Matrix", variant="primary", size="md")
+                        custom_filename_input = gr.Textbox(label="Save As", placeholder="e.g., cyber_dog_neon", lines=1)
+                        save_favorite_btn = gr.Button("💖 Save to Gallery", variant="primary", size="md")
                         modification_status = gr.HTML("")
 
             # Generation Controls Board
@@ -390,68 +611,99 @@ with gr.Blocks(css=GENERATOR_CSS) as demo:
                     with gr.Column(scale=2):
                         with gr.Row():
                             with gr.Column(scale=2):
-                                mode = gr.Radio(choices=["Text to Image", "Sketch to Image", "Fantasy Images"], value="Text to Image", label="1. Choose Your Generation Mode", interactive=True)
+                                mode = gr.Radio(choices=["Text to Image", "Sketch to Image", "Fantasy Images"], value="Text to Image", label="1. Choose Your Generation Mode", interactive=True, elem_id = "mode_radio_group")
                             with gr.Column(scale=1):
-                                count_slider = gr.Number(value=1, minimum=1, maximum=100, precision=0, label="2. Style Variations")
+                                count_slider = gr.Number(value=1, minimum=1, maximum=100, precision=0, label="2. Style Variations", elem_classes=["compact-number"])
 
                         with gr.Row():
                             prompt = gr.Textbox(value="", label="Prompt (Describe the image you want to generate)", lines=3)
 
                         generate_btn = gr.Button("Generate Image", variant="primary", elem_classes=["button-row"])
 
-                    with gr.Column(scale=1, min_width=250):
+                    with gr.Column(scale=1, min_width=250, elem_classes=["sketch-upload-wrapper"]):
                         with gr.Group(visible=False) as sketch_inputs:
-                            sketch_img = gr.Image(type="pil", label="Upload or Draw Sketch", sources=["upload", "clipboard"], height=250)
+                            sketch_img = gr.Image(type="pil", show_label=False, sources=["upload", "clipboard"], height=250)
 
                 status_message = gr.HTML("")
 
-        with gr.TabItem("Saved Gallery Matrix"):
+        with gr.TabItem("Saved Gallery"):
             with gr.Group(elem_classes=["fav-matrix-container"]):
-                gr.Markdown("### 🌟 Saved Artifact Grid Matrix (Compact View)")
+                gr.Markdown("### 🌟 Saved Artifact Grid")
                 saved_gallery = gr.Gallery(label="Archived Asset Scrapbook", columns=10, type="filepath", height="auto", object_fit="cover", preview=False, show_label=False)
+                
+    return {
+        "mode": mode,
+        "count_slider": count_slider,
+        "sketch_inputs": sketch_inputs,
+        "sketch_img": sketch_img,
+        "prompt": prompt,
+        "generate_btn": generate_btn,
+        "selected_preview": selected_preview,
+        "output_gallery": output_gallery,
+        "status_message": status_message,
+        "original_image_backup": original_image_backup,
+        "modify_input_prompt": modify_input_prompt,
+        "strength_control": strength_control,
+        "submit_modification_btn": submit_modification_btn,
+        "reset_original_btn": reset_original_btn,
+        "custom_filename_input": custom_filename_input,
+        "save_favorite_btn": save_favorite_btn,
+        "modification_status": modification_status,
+        "favorites_cache": favorites_cache,
+        "saved_gallery": saved_gallery
+    }
 
-    # Event Wiring
-    mode.change(fn=update_ui, inputs=mode, outputs=[sketch_inputs, count_slider, prompt])
-
-    # REQ FIX: Clears preview instantly as a standalone task first, avoiding any attached loading indicators from the main generation flow
-    generate_btn.click(
+with gr.Blocks(css=GENERATOR_CSS) as demo:
+    ui = create_generator_ui()
+    
+    # --- Event Wiring ---
+    ui["mode"].change(fn=update_ui, inputs=[ui["mode"]], outputs=[ui["sketch_inputs"], ui["count_slider"], ui["prompt"]])
+    
+    ui["generate_btn"].click(
         fn=clear_workspace_preview,
         inputs=None,
-        outputs=[selected_preview]
+        outputs=[ui["selected_preview"]]
     ).then(
         fn=set_processing_notice,
         inputs=None,
-        outputs=[status_message]
+        outputs=[ui["status_message"]]
     ).then(
         fn=generate,
-        inputs=[mode, count_slider, sketch_img, prompt],
-        outputs=[selected_preview, output_gallery, status_message, original_image_backup]
+        inputs=[ui["mode"], ui["count_slider"], ui["sketch_img"], ui["prompt"]],
+        outputs=[ui["selected_preview"], ui["output_gallery"], ui["status_message"], ui["original_image_backup"]]
     )
 
-    output_gallery.select(
+    ui["output_gallery"].select(
         fn=on_gallery_select,
-        inputs=[output_gallery],
-        outputs=[selected_preview, modification_status, original_image_backup]
+        inputs=[ui["output_gallery"]],
+        outputs=[ui["selected_preview"], ui["modification_status"], ui["original_image_backup"]]
     )
 
-    submit_modification_btn.click(
+    ui["submit_modification_btn"].click(
         fn=modify_selected_image,
-        inputs=[selected_preview, modify_input_prompt, strength_control, prompt],
-        outputs=[selected_preview, modification_status]
+        inputs=[ui["selected_preview"], ui["modify_input_prompt"], ui["strength_control"], ui["prompt"]],
+        outputs=[ui["selected_preview"], ui["modification_status"]]
     )
 
-    reset_original_btn.click(
+    ui["reset_original_btn"].click(
         fn=reset_to_original_image,
-        inputs=[original_image_backup],
-        outputs=[selected_preview, modification_status]
+        inputs=[ui["original_image_backup"]],
+        outputs=[ui["selected_preview"], ui["modification_status"]]
     )
 
-    save_favorite_btn.click(
+    ui["save_favorite_btn"].click(
         fn=append_to_favorites,
-        inputs=[selected_preview, custom_filename_input, favorites_cache],
-        outputs=[favorites_cache, saved_gallery, modification_status]
+        inputs=[ui["selected_preview"], ui["custom_filename_input"], ui["favorites_cache"]],
+        outputs=[ui["favorites_cache"], ui["saved_gallery"], ui["modification_status"]]
+    )
+    
+    # --- FORCE DARK MODE ON INITIAL DASHBOARD LOAD ---
+    demo.load(
+        fn=None,
+        inputs=None,
+        outputs=None,
+        js="() => { document.documentElement.classList.add('dark'); }"
     )
 
-    demo.load(fn=None, inputs=None, outputs=None, js="() => { document.documentElement.classList.add('dark'); }")
-
-demo.queue().launch()
+if __name__ == "__main__":
+    demo.queue().launch()
