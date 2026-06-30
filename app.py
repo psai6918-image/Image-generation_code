@@ -9,7 +9,7 @@ from pages.login import (
 from pages.dashboard import (
     create_generator_ui, GENERATOR_CSS, generate, on_gallery_select, 
     modify_selected_image, update_ui, set_processing_notice, 
-    append_to_favorites, reset_to_original_image
+    append_to_favorites, reset_to_original_image, load_existing_favorites
 )
 from pages.payment import create_payment_ui, PAYMENT_CSS
 from pages.contact_us import create_contact_us_ui, CONTACT_US_CSS, handle_contact_submit
@@ -22,6 +22,9 @@ init_db()
 COMBINED_CSS = LOGIN_CSS + "\n" + GENERATOR_CSS + "\n" + PAYMENT_CSS + "\n" + CONTACT_US_CSS
 
 with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
+    
+    # Global multi-user session state engine tracking the active username
+    session_user = gr.State("anonymous")
     
     # ==========================================
     # VIEWPORT CONTAINERS (PUBLIC & PRIVATE LAYOUTS)
@@ -77,26 +80,37 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
     def handle_login(username, password):
         msg, success = login_user(username, password)
         if success:
-            return msg, gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)
-        return msg, gr.update(), gr.update(), gr.update(), gr.update()
+            # Cleanly extracts the real underlying username from database confirmation text
+            extracted_name = username.strip()
+            return msg, gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), extracted_name
+        return msg, gr.update(), gr.update(), gr.update(), gr.update(), "anonymous"
 
     login_btn.click(
         fn=handle_login,
         inputs=[login_user_input, login_pass],
-        outputs=[login_status, public_layout, private_layout, payment_layout, contact_layout]
+        outputs=[login_status, public_layout, private_layout, payment_layout, contact_layout, session_user]
+    ).then( # Instantly updates the visible gallery window using the freshly mapped identity context
+        fn=load_existing_favorites,
+        inputs=[session_user],
+        outputs=[ui["saved_gallery"]]
     )
 
     # --- ACCOUNT REGISTRATION CONTROL ---
     def handle_registration(username, email, password, repeat_password):
         msg, success = save_user(username, email, password, repeat_password)
         if success:
-            return msg, gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)
-        return msg, gr.update(), gr.update(), gr.update(), gr.update()
+            extracted_name = username.strip()
+            return msg, gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), extracted_name
+        return msg, gr.update(), gr.update(), gr.update(), gr.update(), "anonymous"
 
     register_btn.click(
         fn=handle_registration,
         inputs=[reg_user, reg_email, reg_pass, reg_repeat_pass],
-        outputs=[register_status, public_layout, private_layout, payment_layout, contact_layout]
+        outputs=[register_status, public_layout, private_layout, payment_layout, contact_layout, session_user]
+    ).then(
+        fn=load_existing_favorites,
+        inputs=[session_user],
+        outputs=[ui["saved_gallery"]]
     )
 
     # --- PASSWORD RECOVERY EVENTS ---
@@ -157,10 +171,18 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
         outputs=[ui["selected_preview"], ui["modification_status"]]
     )
 
+    # Passes session_user value directly inside append logic pipeline
     ui["save_favorite_btn"].click(
         fn=append_to_favorites, 
-        inputs=[ui["selected_preview"], ui["custom_filename_input"], ui["favorites_cache"]], 
+        inputs=[ui["selected_preview"], ui["custom_filename_input"], ui["favorites_cache"], session_user], 
         outputs=[ui["favorites_cache"], ui["saved_gallery"], ui["modification_status"]]
+    )
+
+    # Refresh gallery context dynamic window upon workspace tab view changing
+    ui["saved_gallery_tab"].select(
+        fn=load_existing_favorites,
+        inputs=[session_user],
+        outputs=[ui["saved_gallery"]]
     )
 
     # --- SUPPORT PANEL EVENT ROUTING ---
@@ -181,21 +203,21 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
                 "Profile Menu",
                 gr.update(value=""),       # Clear sign-in fields
                 gr.update(value=""),
-                '<div style="color: #4ade80; font-weight: bold; text-align: center; margin-top: 10px;">Logout successful. Session cleared!</div>'
+                '<div style="color: #4ade80; font-weight: bold; text-align: center; margin-top: 10px;">Logout successful. Session cleared!</div>',
+                "anonymous"                # Reset session variable profile context
             )
         elif choice == "Account Settings":
-            # Extra view routing placeholder (Redirects user safely to Contact support page)
             gr.Info("Redirecting you to our contact team for configuration requests...")
-            return gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), "Profile Menu", gr.update(), gr.update(), gr.update()
+            return gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), "Profile Menu", gr.update(), gr.update(), gr.update(), gr.update()
         elif choice == "Payment":
-            return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), "Profile Menu", gr.update(), gr.update(), gr.update()
+            return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), "Profile Menu", gr.update(), gr.update(), gr.update(), gr.update()
         
-        return gr.update(), gr.update(), gr.update(), gr.update(), "Profile Menu", gr.update(), gr.update(), gr.update()
+        return gr.update(), gr.update(), gr.update(), gr.update(), "Profile Menu", gr.update(), gr.update(), gr.update(), gr.update()
 
     ui["user_menu"].change(
         fn=handle_menu_navigation,
         inputs=[ui["user_menu"]],
-        outputs=[public_layout, private_layout, payment_layout, contact_layout, ui["user_menu"], login_user_input, login_pass, login_status]
+        outputs=[public_layout, private_layout, payment_layout, contact_layout, ui["user_menu"], login_user_input, login_pass, login_status, session_user]
     )
 
     # --- SECURE PORTAL RETURN REDIRECT TRACKING ---

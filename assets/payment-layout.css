@@ -34,3 +34,20 @@
 }
 
 footer { display: none !important; }
+
+/* Responsive Checkout Gateways */
+@media screen and (max-width: 640px) {
+    #checkout-layout-row {
+        flex-direction: column !important;
+    }
+    
+    .summary-box, .checkout-box {
+        width: 100% !important;
+        margin-bottom: 15px !important;
+    }
+    
+    .pay-btn {
+        padding: 12px 24px !important;
+        font-size: 0.95em !important;
+    }
+}

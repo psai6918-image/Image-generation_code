@@ -12,7 +12,7 @@ from config.database import DB_CONFIG
 
 # --- DYNAMIC CSS LOADING ---
 # This reads the external CSS file into the LOGIN_CSS variable so app.py doesn't break
-css_path = os.path.join("assets", "login.css")
+css_path = os.path.join("assets", "login-layout.css")
 if os.path.exists(css_path):
     with open(css_path, "r", encoding="utf-8") as f:
         LOGIN_CSS = f.read()

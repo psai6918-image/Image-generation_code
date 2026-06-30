@@ -392,3 +392,24 @@ footer { display: none !important; }
     border-color: #38bdf8 !important;
     box-shadow: 0 0 10px rgba(56, 189, 248, 0.2) !important;
 }
+
+/* Responsive Mobile Layout Adjustments */
+@media screen and (max-width: 768px) {
+    /* Force side-by-side workspace panels to stack vertically */
+    .gradio-container .row, 
+    .gradio-container div[class*="row"] {
+        flex-direction: column !important;
+    }
+    
+    /* Make image galleries and preview modules utilize full viewport width */
+    .gradio-container div[class*="column"] {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Optimize padding constraints for tighter glass boxes */
+    .checkout-box, .contact-form-card {
+        padding: 16px !important;
+        margin-top: 15px !important;
+    }
+}

@@ -19,7 +19,7 @@ from diffusers import (
 )
 
 # --- DYNAMIC CSS LOADING ---
-css_path = os.path.join("assets", "dashboard.css")
+css_path = os.path.join("assets", "dashboard-layout.css")
 if os.path.exists(css_path):
     with open(css_path, "r", encoding="utf-8") as f:
         GENERATOR_CSS = f.read()
@@ -30,17 +30,35 @@ else:
 OUTPUT_DIR = "fantasy_variants"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-FAVORITES_DIR = os.path.join(OUTPUT_DIR, "favorites")
-os.makedirs(FAVORITES_DIR, exist_ok=True)
+FAVORITES_ROOT = os.path.join(OUTPUT_DIR, "favorites")
+os.makedirs(FAVORITES_ROOT, exist_ok=True)
 
 
-def load_existing_favorites():
+def get_user_favorites_dir(username):
+    """
+    Dynamically isolates directory paths per user context 
+    to prevent cross-user data exposure.
+    """
+    safe_username = "".join(c for c in str(username) if c.isalnum() or c in ('_', '-')).rstrip()
+    if not safe_username:
+        safe_username = "anonymous"
+    user_dir = os.path.join(FAVORITES_ROOT, safe_username)
+    os.makedirs(user_dir, exist_ok=True)
+    return user_dir
+
+
+def load_existing_favorites(username="anonymous"):
+    """
+    Loads favorites matching the unique identity of the interacting user.
+    """
+    user_fav_dir = get_user_favorites_dir(username)
     favorites = []
-    if os.path.exists(FAVORITES_DIR):
+    
+    if os.path.exists(user_fav_dir):
         file_list = []
-        for f in os.listdir(FAVORITES_DIR):
+        for f in os.listdir(user_fav_dir):
             if f.endswith(".png"):
-                full_path = os.path.join(FAVORITES_DIR, f)
+                full_path = os.path.join(user_fav_dir, f)
                 stat = os.stat(full_path)
                 try:
                     creation_time = stat.st_birthtime
@@ -278,22 +296,27 @@ def reset_to_original_image(backup_path):
     return backup_path, '<div style="color: #60a5fa; text-align: center;"> Reverted back to the original layout frame.</div>'
 
 
-def append_to_favorites(target_img, custom_name, _):
+def append_to_favorites(target_img, custom_name, _, username="anonymous"):
+    """
+    Saves the target image directly into the explicit user profile sandbox directory.
+    """
+    user_fav_dir = get_user_favorites_dir(username)
+
     if not target_img:
-        return load_existing_favorites(), gr.update(), '<div style="color: #f87171; text-align: center;">Nothing to save.</div>'
+        return load_existing_favorites(username), gr.update(), '<div style="color: #f87171; text-align: center;">Nothing to save.</div>'
 
     prefix = "".join(c for c in custom_name if c.isalnum() or c in (' ', '_', '-')).rstrip() if custom_name else "fav"
     prefix = prefix.replace(" ", "_").lower() if prefix else "fav"
 
     filename = f"{prefix}_{uuid.uuid4().hex[:4]}.png"
-    save_path = os.path.join(FAVORITES_DIR, filename)
+    save_path = os.path.join(user_fav_dir, filename)
 
     if isinstance(target_img, str):
         Image.open(target_img).save(save_path)
     else:
         Image.fromarray(target_img).save(save_path)
 
-    updated_favs = load_existing_favorites()
+    updated_favs = load_existing_favorites(username)
     return updated_favs, gr.update(value=updated_favs), '<div style="color: #4ade80; font-weight: bold; margin-top: 8px; text-align: center; width: 100%;">Saved to persistent gallery!</div>'
 
 
@@ -385,19 +408,11 @@ def create_generator_ui():
         with gr.TabItem("Saved Gallery") as saved_gallery_tab:
             with gr.Group(elem_classes=["fav-matrix-container"]):
                 saved_gallery = gr.Gallery(
-                    value=load_existing_favorites,
                     show_label=False,
                     columns=10,
                     type="filepath",
                     height="auto"
                 )
-
-    # Clean tab selection refresh
-    saved_gallery_tab.select(
-        fn=load_existing_favorites,
-        inputs=None,
-        outputs=[saved_gallery]
-    )
 
     return {
         "mode": mode,
@@ -419,6 +434,7 @@ def create_generator_ui():
         "modification_status": modification_status,
         "favorites_cache": favorites_cache,
         "saved_gallery": saved_gallery,
+        "saved_gallery_tab": saved_gallery_tab,  # Handled reactively by app.py mapping loops
         "account_btn": account_btn,
         "payment_btn": payment_btn,
         "logout_btn": logout_btn,

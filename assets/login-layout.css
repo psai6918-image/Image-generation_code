@@ -279,3 +279,17 @@ footer { display: none !important; }
     color: #ff9900 !important;
     transition: all 0.25s ease !important;
 }
+
+/* Responsive Auth Portals */
+@media screen and (max-width: 480px) {
+    /* Scale down header fonts slightly so they don't wrap awkwardly */
+    .gradio-container h1 {
+        font-size: 1.8rem !important;
+    }
+    
+    /* Expand your login card width slightly on tiny displays */
+    div[class*="login-card-wrapper"] {
+        width: 95% !important;
+        padding: 20px 15px !important;
+    }
+}

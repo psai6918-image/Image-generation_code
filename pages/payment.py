@@ -5,7 +5,7 @@ from datetime import datetime
 import gradio as gr
 
 # --- DYNAMIC CSS LOADING ---
-css_path = os.path.join("assets", "payment.css")
+css_path = os.path.join("assets", "payment-layout.css")
 if os.path.exists(css_path):
     with open(css_path, "r", encoding="utf-8") as f:
         PAYMENT_CSS = f.read()
