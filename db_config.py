@@ -19,7 +19,7 @@ LOGIN_CSS = """
 /* ============================================================
    1. GLOBAL CANVAS & VIBRANT BACKGROUND BACKDROP
 ============================================================ */
-html, body, grad-app, .gradio-container {
+:root, html, body, grad-app, .gradio-container {
     background: 
         radial-gradient(circle at 15% 50%, rgba(236, 72, 153, 0.40), transparent 50%),
         radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.40), transparent 50%),
@@ -47,14 +47,14 @@ html, body, grad-app, .gradio-container {
     box-shadow: none !important;
 }
 
-/* Master Grid Row setup */
+/* Master Grid Row setup - CHANGED TO LEFT-ALIGNED (flex-start) */
 .gradio-container div[class*="row"], 
 .gradio-container .gr-row {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: flex-start !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     width: 100% !important;
     gap: 32px !important;
 }
@@ -259,7 +259,7 @@ input::placeholder, textarea::placeholder {
     transition: all 0.2s ease-in-out !important;
     max-width: 220px !important; 
     width: 100% !important;
-    margin: 15px auto 5px auto !important; 
+    margin: 15px 0 5px 0 !important; /* CHANGED FROM AUTO MARGINS TO LEFT-ALIGNED */
     display: block !important;
 }
 
@@ -277,7 +277,7 @@ input::placeholder, textarea::placeholder {
     cursor: pointer !important;
     box-shadow: none !important;
     padding: 0 !important;
-    margin: 10px auto 0 auto !important;
+    margin: 10px 0 0 0 !important; /* CHANGED FROM AUTO MARGINS TO LEFT-ALIGNED */
     display: block !important;
     width: fit-content !important;
 }
@@ -360,8 +360,8 @@ def save_user(username, email, password, repeat_password):
             
             secure_password_string = hash_password(password)
             insert_query = """
-            INSERT INTO users (Username, Email, Password, dob) 
-            VALUES (%s, %s, %s, NULL)
+            INSERT INTO users (Username, Email, Password) 
+            VALUES (%s, %s, %s)
             """
             cursor.execute(insert_query, (username, email, secure_password_string))
             connection.commit()
@@ -425,12 +425,11 @@ def direct_forgot_password_trigger(username_or_email):
     """
     target = username_or_email.strip()
     if not target:
-        # Error stays on the Sign In view so they know they need to enter a value first
         return (
             "⚠️ Please enter your Username or Email address in the text box above before clicking Forgot Password.", 
-            gr.update(), # Keep forgot tab hidden
-            gr.update(), # Don't shift current tab
-            gr.update(), gr.update(), gr.update(), gr.update(value=False) # Reset components invisible/uncheck toggle
+            gr.update(), 
+            gr.update(), 
+            gr.update(), gr.update(), gr.update(), gr.update(value=False)
         )
         
     connection = None
@@ -446,12 +445,12 @@ def direct_forgot_password_trigger(username_or_email):
                 matched_username = user[0]
                 return (
                     f"✅ Account found for '{matched_username}'. Please choose your new password below.",
-                    gr.update(visible=True),               # Make Password Reset Tab Visible
-                    gr.update(selected="forgot_tab"),       # Force switch view directly to it
-                    gr.update(visible=True),                # Show password field
-                    gr.update(visible=True),                # Show repeat password field
-                    gr.update(visible=True),                # Show submit change button
-                    gr.update(visible=True, value=False)    # Show reset show pass checkbox & make sure unchecked
+                    gr.update(visible=True),               
+                    gr.update(selected="forgot_tab"),       
+                    gr.update(visible=True),                
+                    gr.update(visible=True),                
+                    gr.update(visible=True),                
+                    gr.update(visible=True, value=False)    
                 )
             else:
                 return (
@@ -562,11 +561,10 @@ def create_login_ui():
                         
                         forgot_link_btn = gr.Button("Forgot Password?", elem_classes=["forgot-password-btn"])
 
-                    # --- TAB 3: Forgot Password (Dynamically populated from Sign In field) ---
+                    # --- TAB 3: Forgot Password ---
                     with gr.Tab("Password Reset", id="forgot_tab", visible=False) as forgot_tab:
                         gr.Markdown("## Recover Account")
                         
-                        # Step 2 Fields - Directly shown once account verification matches field data
                         reset_new_password = gr.Textbox(label="New Password", placeholder="Enter a new password", type="password", max_lines=1, visible=False, elem_id="reset_password_field")
                         reset_repeat_password = gr.Textbox(label="Confirm New Password", placeholder="Repeat your new password", type="password", max_lines=1, visible=False, elem_id="reset_repeat_password_field")
                         
@@ -639,10 +637,9 @@ with gr.Blocks(css=LOGIN_CSS) as demo:
     )
 
     # --- SIMPLIFIED FORGOT PASSWORD EVENT HANDLER ---
-    # Clicking "Forgot Password?" directly takes the inputs from the current Sign-In text field
     forgot_link_btn.click(
         fn=direct_forgot_password_trigger,
-        inputs=[login_user_input], # Reads directly from your active Sign-In field!
+        inputs=[login_user_input], 
         outputs=[login_status, forgot_tab, auth_tabs, reset_new_password, reset_repeat_password, reset_save_btn, reset_show_pass]
     )
     

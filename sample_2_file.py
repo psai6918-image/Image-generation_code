@@ -302,6 +302,33 @@ html, body, grad-app, .gradio-container {
     padding: 30px !important;
 }
 
+.gradio-container .progress-wrap, 
+.gradio-container div[class*="progress-wrap"],
+.gradio-container .loading,
+.gradio-container div[class*="loading-div"] {
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(16px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 14px !important;
+    padding: 12px 20px !important;
+    box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+.gradio-container .progress-text,
+.gradio-container div[class*="progress-text"] {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6) !important;
+    margin-bottom: 4px !important;
+}
+
+.gradio-container .progress-bar,
+.gradio-container div[class*="progress-bar"] {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
+    border-radius: 6px !important;
+}
+
 .gradio-container .block,
 .gradio-container .tabs,
 .gradio-container .tabitem,
@@ -334,7 +361,12 @@ html, body, grad-app, .gradio-container {
 }
 
 .sketch-upload-wrapper {
-    margin-left: 24px !important;
+    margin-left: 0px !important;
+    padding-left: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
 }
 
 .sketch-upload-wrapper .image-container {
@@ -371,6 +403,19 @@ html, body, grad-app, .gradio-container {
 .gradio-container textarea:focus {
     border-color: rgba(236, 72, 153, 0.7) !important;
     background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.shortened-prompt-col {
+    max-width: 60% !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.shortened-prompt-col > div {
+    width: 100% !important;
 }
 
 .control-settings-card, .modify-panel-card {
@@ -501,6 +546,19 @@ html, body, grad-app, .gradio-container {
 #mode_radio_group {
     background: none !important;
     border: none !important;
+    width: 100% !important;
+}
+
+#mode_radio_group > div {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    gap: 10px !important;
+}
+
+#mode_radio_group input[type="radio"] {
+    display: none !important;
 }
 
 #mode_radio_group label {
@@ -509,71 +567,72 @@ html, body, grad-app, .gradio-container {
     color: white !important;
     border-radius: 8px !important;
     transition: all 0.2s ease !important;
+    padding: 8px 16px !important;
+    flex: 1 1 0% !important;
+    min-width: 140px !important;
+    text-align: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 #mode_radio_group label.selected {
-    background: rgba(236, 72, 153, 0.4) !important;
-    border: 1px solid rgba(236, 72, 153, 0.8) !important;
+    background: linear-gradient(135deg, #00d2ff 0%, #0066ff 100%) !important;
+    border: 1px solid #38bdf8 !important;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.5) !important;
     font-weight: bold !important;
 }
 
-/* --- FIXED SAVED GALLERY MATRIX LOGIC & ELIMINATED VERTICAL GAP --- */
+/* --- FIXES FOR THE GALLERY PICTURE & CAPTION LAYOUT --- */
+.fav-matrix-container .grid-container,
+.fav-matrix-container div[class*="grid-container"],
+.fav-matrix-container .gallery,
 .fav-matrix-container div[class*="gallery"] {
-    display: block !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 16px !important;
+    overflow: visible !important;
 }
 
-.fav-matrix-container div[class*="gallery"] > div {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
-    gap: 24px 20px !important;
-    align-content: start !important;       /* Forces rows to stack tight against the top */
-    grid-auto-rows: max-content !important; /* Forces row heights to only match content size */
-}
-
-.fav-matrix-container button[class*="thumbnail"] {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+.fav-matrix-container button.thumbnail-item,
+.fav-matrix-container div[class*="thumbnail-item"],
+.fav-matrix-container .thumbnail-item {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    width: 100% !important;
-    max-width: 180px !important;
-    height: auto !important; 
-    min-height: 0 !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 12px !important;
-    padding: 8px !important;
-    margin: 0 !important;
-    overflow: visible !important; 
+    padding: 10px !important;
+    height: auto !important;   /* Let container height dynamically adapt to the caption */
+    min-height: 160px !important;
+    width: 100% !important;
     box-sizing: border-box !important;
 }
 
+.fav-matrix-container .thumbnail-item img,
 .fav-matrix-container img {
-    height: 140px !important;
+    height: 100px !important;  /* Constrain layout height to accommodate text space */
     width: 100% !important;
-    max-width: 164px !important;
     object-fit: cover !important;
     border-radius: 8px !important;
-    margin-bottom: 8px !important;
+    display: block !important;
 }
 
-.fav-matrix-container span[class*="caption"],
-.fav-matrix-container .caption-label {
-    display: block !important;
+.fav-matrix-container .caption-label,
+.fav-matrix-container div[class*="caption-label"],
+.fav-matrix-container span[class*="caption"] {
     position: relative !important;
-    font-size: 0.85em !important;
-    font-weight: 500 !important;
-    color: #e2e8f0 !important;
-    text-align: center !important;
+    display: block !important;
     width: 100% !important;
-    max-width: 164px !important;
+    font-size: 0.82em !important;
+    color: #cbd5e1 !important;
+    text-align: center !important;
+    margin-top: 8px !important;
+    padding: 0 4px !important;
+    white-space: normal !important;  /* Wraps lines perfectly underneath image */
     word-break: break-all !important;
-    white-space: normal !important; 
-    overflow-wrap: break-word !important;
-    padding: 4px 2px !important;
-    margin: 0 !important;
-    box-sizing: border-box !important;
+    overflow: visible !important;
 }
 
 .fav-matrix-container {
@@ -590,26 +649,50 @@ html, body, grad-app, .gradio-container {
     flex-direction: column !important;
 }
 
-.status-msg-container {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    text-align: center !important;
-    width: 100% !important;
-    margin-top: 12px !important;
-}
-
-.status-msg-container div, 
-.status-msg-container .prose {
-    text-align: center !important;
-    margin: 0 auto !important;
-    width: 100% !important;
-}
-
 .button-row { width: 100% !important; margin-top: 10px !important; }
 .editing-buttons-row { margin-top: 25px !important; }
 .compact-number { max-width: 140px !important; width: 100% !important; }
 footer { display: none !important; }
+
+#top-controls-row {
+    gap: 35px !important;
+}
+
+/* --- ADJUSTED DROP-DOWN USER MENU PANEL STYLES --- */
+.header-navigation-row {
+    display: flex !important;
+    justify(space-between) !important;
+    align-items: center !important;
+    width: 100% !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    margin-bottom: 25px !important;
+    padding-bottom: 10px !important;
+}
+
+#main-studio-title h1 {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.user-menu-btn {
+    background: rgba(255, 255, 255, 0.10) !important;
+    border: 1px solid rgba(255, 255, 255, 0.20) !important;
+    color: white !important;
+    border-radius: 10px !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+}
+
+.user-menu-btn input, .user-menu-btn .secondary-wrap {
+    text-align: center !important;
+    cursor: pointer !important;
+}
+
+.user-menu-btn:hover {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2) !important;
+}
 """
 
 def update_ui(mode_selection):
@@ -623,10 +706,26 @@ def update_ui(mode_selection):
 def create_generator_ui():
     original_image_backup = gr.State(None)
     favorites_cache = gr.State([])
+    
+    with gr.Row(elem_classes=["header-navigation-row"]):
+        with gr.Column(scale=10):
+            gr.Markdown("# AI Multimode Image Studio", elem_id="main-studio-title")
+        with gr.Column(scale=2, min_width=180):
+            user_menu = gr.Dropdown(
+                choices=["Profile Menu", "Account Settings", "Payment", "Log out"],
+                value="Profile Menu",
+                show_label=False,
+                container=False,
+                interactive=True,
+                elem_classes=["user-menu-btn"]
+            )
+            
+            account_btn = gr.Button("Account", visible=False)
+            payment_btn = gr.Button("Payment", visible=False)
+            logout_btn = gr.Button("Logout", visible=False)
 
-    gr.Markdown("#  AI Multimode Image Studio")
-
-    with gr.Tabs():
+    tabs = gr.Tabs()
+    with tabs:
         with gr.TabItem("Studio Workspace"):
             with gr.Row():
                 with gr.Column(scale=3, elem_classes=["gallery-column"]):
@@ -634,7 +733,7 @@ def create_generator_ui():
 
                 with gr.Column(scale=3):
                     with gr.Group(visible=True, elem_classes=["modify-panel-card"]) as modify_panel:
-                        gr.Markdown("###  Workspace Editing Panel")
+                        gr.Markdown("###   Workspace Editing Panel")
                         selected_preview = gr.Image(show_label=False, type="filepath", interactive=False)
 
                         modify_input_prompt = gr.Textbox(label="Prompt Modification", placeholder="Describe adjustments... e.g., 'wearing a red collar'")
@@ -647,32 +746,32 @@ def create_generator_ui():
                         gr.Markdown("---")
                         custom_filename_input = gr.Textbox(label="Save As", placeholder="e.g., cyber_dog_neon", lines=1)
                         save_favorite_btn = gr.Button(" Save to Gallery", variant="primary", size="md")
-                        
-                        with gr.Row(elem_classes=["status-msg-container"]):
-                            modification_status = gr.HTML("")
+                        modification_status = gr.HTML("")
 
-            # Generation Controls Board
+            status_message = gr.HTML("")
+            
             with gr.Group(elem_classes="control-settings-card"):
                 with gr.Row():
                     with gr.Column(scale=2):
-                        with gr.Row():
-                            with gr.Column(scale=2):
+                        with gr.Row(elem_id="top-controls-row"):
+                            with gr.Column(scale=3, min_width=0):
                                 mode = gr.Radio(choices=["Text to Image", "Sketch to Image", "Fantasy Images"], value="Text to Image", label="1. Choose Your Generation Mode", interactive=True, elem_id="mode_radio_group")
-                            with gr.Column(scale=1):
+                            with gr.Column(scale=1, min_width=140):
                                 count_slider = gr.Number(value=1, minimum=1, maximum=100, precision=0, label="2. Style Variations", elem_classes=["compact-number"])
+                            with gr.Column(scale=2): 
+                                pass
 
                         with gr.Row():
-                            prompt = gr.Textbox(value="", label="Prompt (Describe the image you want to generate)", lines=3)
-
-                        generate_btn = gr.Button("Generate Image", variant="primary", elem_classes=["button-row"])
+                            with gr.Column(elem_classes=["shortened-prompt-col"]):
+                                scroll_notice = gr.HTML("")
+                                prompt = gr.Textbox(value="", label="Prompt (Describe the image you want to generate)", lines=3)
+                                generate_btn = gr.Button("Generate Image", variant="primary")
 
                     with gr.Column(scale=1, min_width=250, elem_classes=["sketch-upload-wrapper"]):
                         with gr.Group(visible=False) as sketch_inputs:
                             sketch_img = gr.Image(type="pil", show_label=False, sources=["upload", "clipboard"], height=250)
 
-                status_message = gr.HTML("")
-
-        with gr.TabItem("Saved Gallery"):
+        with gr.TabItem("Saved Gallery") as saved_gallery_tab:
             with gr.Group(elem_classes=["fav-matrix-container"]):
                 saved_gallery = gr.Gallery(
                     value=load_existing_favorites(),
@@ -681,6 +780,13 @@ def create_generator_ui():
                     type="filepath",
                     height="auto"
                 )
+
+    # Clean tab selection refresh
+    saved_gallery_tab.select(
+        fn=load_existing_favorites,
+        inputs=None,
+        outputs=[saved_gallery]
+    )
 
     return {
         "mode": mode,
@@ -701,13 +807,16 @@ def create_generator_ui():
         "save_favorite_btn": save_favorite_btn,
         "modification_status": modification_status,
         "favorites_cache": favorites_cache,
-        "saved_gallery": saved_gallery
+        "saved_gallery": saved_gallery,
+        "account_btn": account_btn,
+        "payment_btn": payment_btn,
+        "logout_btn": logout_btn,
+        "user_menu": user_menu
     }
 
 with gr.Blocks(css=GENERATOR_CSS) as demo:
     ui = create_generator_ui()
 
-    # --- Event Wiring ---
     ui["mode"].change(fn=update_ui, inputs=[ui["mode"]], outputs=[ui["sketch_inputs"], ui["count_slider"], ui["prompt"]])
 
     ui["generate_btn"].click(
@@ -748,7 +857,6 @@ with gr.Blocks(css=GENERATOR_CSS) as demo:
         outputs=[ui["favorites_cache"], ui["saved_gallery"], ui["modification_status"]]
     )
 
-    # --- FORCE GLOBAL DARK THEME CLASSES ON RUNTIME MOUNT ---
     demo.load(
         fn=None,
         inputs=None,

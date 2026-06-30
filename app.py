@@ -3,22 +3,23 @@ from db_config import (
     create_login_ui, LOGIN_CSS, save_user, login_user,
     direct_forgot_password_trigger, commit_new_password
 )
-# Fixed import mapping to pull layout properties from sample_file directly
-from samples_file import (
+from sample_2_file import (
     create_generator_ui, GENERATOR_CSS, generate, on_gallery_select, 
     modify_selected_image, update_ui, set_processing_notice, 
-    append_to_favorites, reset_to_original_image, clear_workspace_preview
+    append_to_favorites, reset_to_original_image
 )
+from payment_file import create_payment_ui
 
+# Appending Generator CSS after Login CSS grants priority hierarchy cascading to layout rules
 COMBINED_CSS = LOGIN_CSS + "\n" + GENERATOR_CSS
 
 with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
     
-    # --- AUTHENTICATION LAYOUT ---
+    # --- AUTHENTICATION LAYOUT (PUBLIC) ---
     with gr.Column(visible=True) as public_layout:
         auth_elements = create_login_ui()
         
-        # Exact matching unpacking index arrays for the 20 components returned from db_config
+        # EXACT MATCH UNPACKING: Elements 0-19 map accurately to textboxes to ensure typing works!
         login_user_input      = auth_elements[0]
         login_pass            = auth_elements[1]
         login_btn             = auth_elements[2]
@@ -43,81 +44,86 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
         reset_show_pass       = auth_elements[18]
         reset_save_btn        = auth_elements[19]
 
-    # --- GENERATOR UI LAYOUT ---
+    # --- GENERATOR UI LAYOUT (PRIVATE WORKSPACE) ---
     with gr.Column(visible=False) as private_layout:
         ui = create_generator_ui()
 
-    # --- MAIN LOGIN ROUTER LOGIC ---
+    # --- PAYMENT PORTAL LAYOUT (SECURE GATEWAY) ---
+    with gr.Column(visible=False) as payment_layout:
+        payment_container, back_to_workspace_btn = create_payment_ui()
+
+    # --- LOG IN / REDIRECT LOGIC ---
     def handle_login(username, password):
         msg, success = login_user(username, password)
         if success:
-            # Transition out the login layout panel and swap visibility targets
-            return msg, gr.update(visible=False), gr.update(visible=True)
+            # Hide authentication layout, open the core application workspace, keep payment hidden
+            return msg, gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)
         else:
-            return msg, gr.update(), gr.update()
+            return msg, gr.update(), gr.update(), gr.update()
 
-    # Wire Up Account Registration Actions
-    register_btn.click(
-        fn=save_user,
-        inputs=[reg_user, reg_email, reg_pass, reg_repeat_pass],
-        outputs=[register_status]
-    )
-
-    # Wire Up Sign In Routing (Swaps panels on success)
     login_btn.click(
-        fn=handle_login, 
-        inputs=[login_user_input, login_pass], 
-        outputs=[login_status, public_layout, private_layout]
+        fn=handle_login,
+        inputs=[login_user_input, login_pass],
+        outputs=[login_status, public_layout, private_layout, payment_layout]
     )
 
-    # --- PASSWORD RECOVERY LOGIC WIRE-UP ---
-    # Trigger account lookup when user clicks "Forgot Password?"
+    # --- REGISTER ACCOUNTS INTERFACE BUTTONS ---
+    def handle_registration(username, email, password, repeat_password):
+        msg, success = save_user(username, email, password, repeat_password)
+        if success:
+            return msg, gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)
+        else:
+            return msg, gr.update(), gr.update(), gr.update()
+
+    register_btn.click(
+        fn=handle_registration,
+        inputs=[reg_user, reg_email, reg_pass, reg_repeat_pass],
+        outputs=[register_status, public_layout, private_layout, payment_layout]
+    )
+
+    # --- FORGOT/RESET PASSWORD RECOVERY HANDLERS ---
     forgot_link_btn.click(
         fn=direct_forgot_password_trigger,
         inputs=[login_user_input], 
         outputs=[login_status, forgot_tab, auth_tabs, reset_new_password, reset_repeat_password, reset_save_btn, reset_show_pass]
     )
     
-    # Save the updated cryptographic credentials to the database schema
     reset_save_btn.click(
         fn=commit_new_password,
         inputs=[login_user_input, reset_new_password, reset_repeat_password],
         outputs=[forgot_status]
     )
 
-    # Clean backtracking function to reset visibility thresholds and return back home
     back_to_signin_btn.click(
         fn=lambda: (gr.update(selected="signin_tab"), gr.update(visible=False)),
         inputs=None,
         outputs=[auth_tabs, forgot_tab]
     )
 
-    # --- EVENT WIRING FOR THE DASHBOARD GENERATOR ---
-    ui["mode"].change(update_ui, inputs=[ui["mode"]], outputs=[ui["sketch_inputs"], ui["count_slider"], ui["prompt"]])
-
+    # --- WORKSPACE GENERATION STEP ROUTING EVENTS ---
     ui["generate_btn"].click(
-        fn=clear_workspace_preview,
+        fn=update_ui,
         inputs=None,
-        outputs=[ui["selected_preview"]]
-    ).then(
-        fn=set_processing_notice, 
-        inputs=None, 
         outputs=[ui["status_message"]]
     ).then(
-        fn=generate, 
-        inputs=[ui["mode"], ui["count_slider"], ui["sketch_img"], ui["prompt"]], 
+        fn=set_processing_notice,
+        inputs=None,
+        outputs=[ui["status_message"]]
+    ).then(
+        fn=generate,
+        inputs=[ui["mode"], ui["count_slider"], ui["sketch_img"], ui["prompt"]],
         outputs=[ui["selected_preview"], ui["output_gallery"], ui["status_message"], ui["original_image_backup"]]
     )
 
     ui["output_gallery"].select(
-        fn=on_gallery_select, 
-        inputs=[ui["output_gallery"]], 
+        fn=on_gallery_select,
+        inputs=[ui["output_gallery"]],
         outputs=[ui["selected_preview"], ui["modification_status"], ui["original_image_backup"]]
     )
 
     ui["submit_modification_btn"].click(
-        fn=modify_selected_image, 
-        inputs=[ui["selected_preview"], ui["modify_input_prompt"], ui["strength_control"], ui["prompt"]], 
+        fn=modify_selected_image,
+        inputs=[ui["selected_preview"], ui["modify_input_prompt"], ui["strength_control"], ui["prompt"]],
         outputs=[ui["selected_preview"], ui["modification_status"]]
     )
 
@@ -133,5 +139,61 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
         outputs=[ui["favorites_cache"], ui["saved_gallery"], ui["modification_status"]]
     )
 
+    # --- DROPDOWN INTERFACE PROFILE NAVIGATOR ---
+    def handle_menu_navigation(choice):
+        if choice == "Log out":
+            return (
+                gr.update(visible=True),   # Show Authentication Layout
+                gr.update(visible=False),  # Hide Creative Workspace
+                gr.update(visible=False),  # Hide Payment Screen
+                "Profile Menu",
+                gr.update(value=""),
+                gr.update(value=""),
+                '<div style="color: #4ade80; font-weight: bold; text-align: center; margin-top: 10px;">Logout successful. Session cleared!</div>'
+            )
+        elif choice == "Account Settings":
+            gr.Info("Account settings panel coming soon!")
+            return gr.update(), gr.update(), gr.update(), "Profile Menu", gr.update(), gr.update(), gr.update()
+        elif choice == "Payment":
+            # Switch views instantly to the payment panel
+            return (
+                gr.update(visible=False),  # Hide Authentication
+                gr.update(visible=False),  # Hide Creative Workspace
+                gr.update(visible=True),   # Show Split Column Checkout Layout
+                "Profile Menu",
+                gr.update(), gr.update(), gr.update()
+            )
+        
+        return gr.update(), gr.update(), gr.update(), "Profile Menu", gr.update(), gr.update(), gr.update()
+
+    ui["user_menu"].change(
+        fn=handle_menu_navigation,
+        inputs=[ui["user_menu"]],
+        outputs=[
+            public_layout, 
+            private_layout, 
+            payment_layout, 
+            ui["user_menu"], 
+            login_user_input, 
+            login_pass, 
+            login_status
+        ]
+    )
+
+    # --- CHECKOUT RETURN ROUTING TRIGGER BUTTON ---
+    back_to_workspace_btn.click(
+        fn=lambda: (gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)),
+        inputs=None,
+        outputs=[public_layout, private_layout, payment_layout]
+    )
+    
+    # --- FORCE GLOBAL DARK MODE FOR AUTH & GENERATOR WORKSPACE ---
+    demo.load(
+        fn=None,
+        inputs=None,
+        outputs=None,
+        js="() => { document.documentElement.classList.add('dark'); }"
+    )
+
 if __name__ == "__main__":
-    demo.queue().launch()
+    demo.launch(share=True)
