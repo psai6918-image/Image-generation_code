@@ -1,0 +1,36 @@
+/* assets/payment.css */
+/* Outer structural box styling */
+.checkout-box {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(24px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 30px 60px 0 rgba(0, 0, 0, 0.3) !important;
+    padding: 30px !important;
+    margin-top: 35px !important;
+    margin-bottom: 20px !important;
+}
+
+/* Custom button styling overrides */
+.pay-btn {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+    padding: 14px 36px !important;
+    cursor: pointer !important;
+    width: 100% !important;
+    display: block !important;
+    margin: 20px auto 0 auto !important;
+    box-shadow: 0 8px 20px rgba(236, 72, 153, 0.4) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.pay-btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 12px 24px rgba(236, 72, 153, 0.55) !important;
+}
+
+footer { display: none !important; }

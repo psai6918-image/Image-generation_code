@@ -1,3 +1,4 @@
+# pages/dashboard.py
 import os
 import csv
 import torch
@@ -7,7 +8,6 @@ import uuid
 import itertools
 import math
 import gc
-import re
 from datetime import datetime
 from PIL import Image
 import gradio as gr
@@ -18,12 +18,21 @@ from diffusers import (
     StableDiffusionImg2ImgPipeline
 )
 
-# --- 0. DIRECTORY SETUP ---
+# --- DYNAMIC CSS LOADING ---
+css_path = os.path.join("assets", "dashboard.css")
+if os.path.exists(css_path):
+    with open(css_path, "r", encoding="utf-8") as f:
+        GENERATOR_CSS = f.read()
+else:
+    GENERATOR_CSS = ""
+
+# --- DIRECTORY SETUP ---
 OUTPUT_DIR = "fantasy_variants"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 FAVORITES_DIR = os.path.join(OUTPUT_DIR, "favorites")
 os.makedirs(FAVORITES_DIR, exist_ok=True)
+
 
 def load_existing_favorites():
     favorites = []
@@ -41,13 +50,13 @@ def load_existing_favorites():
                 file_list.append((creation_time, os.path.abspath(full_path), f))
         
         file_list.sort(key=lambda x: x[0])
-        
         for _, path, name in file_list:
             favorites.append((path, name))
             
     return favorites
 
-# --- 1. CONFIGURATION, LOGGING & MODELS ---
+
+# --- MODEL COMPUTATION & HOOKS ---
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dtype = torch.float16 if device == "cuda" else torch.float32
 
@@ -99,7 +108,7 @@ if device == "cuda":
     pipe_sketch2img.enable_attention_slicing()
     pipe_img2img.enable_attention_slicing()
 
-# --- 2. PROCEDURAL FANTASY STYLES ---
+# --- PROCEDURAL GENERATIVE ASSETS ---
 ATMOSPHERES = [
     "cinematic lighting", "shimmering aurora borealis sky", "dramatic thunderstorm",
     "golden hour sunset", "mystical star-filled night sky", "steampunk industrial brass sunset",
@@ -120,6 +129,7 @@ ALL_STYLES = [f"{atm}, {env}, highly detailed, 8k resolution, digital art master
 
 NEGATIVE_PROMPT = "ugly, deformed, blurry, modern buildings, cars, low quality, text, watermark, bad anatomy"
 
+
 def preprocess_sketch(pil_image):
     if pil_image is None:
         return None
@@ -130,7 +140,8 @@ def preprocess_sketch(pil_image):
     final_np_img = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
     return Image.fromarray(final_np_img).resize((512, 512))
 
-# --- 3. PIPELINE EXECUTIONS ---
+
+# --- PIPELINE ROUTING FUNCTIONS ---
 def generate(mode, count_selection, sketch_img, base_prompt, progress=gr.Progress()):
     start_dt = datetime.now()
     warning_msg = '<div style="text-align: center; width: 100%; font-size: 1.1em; color: #fff; background: transparent; padding: 0; margin: 10px 0;"> Verify important outputs before saving.</div>'
@@ -202,6 +213,7 @@ def generate(mode, count_selection, sketch_img, base_prompt, progress=gr.Progres
     preview_out = saved_paths[0]
     return preview_out, saved_paths, warning_msg, preview_out
 
+
 def on_gallery_select(evt: gr.SelectData, current_images):
     if not current_images or evt.index is None:
         return None, "", None
@@ -221,6 +233,7 @@ def on_gallery_select(evt: gr.SelectData, current_images):
 
     except Exception as e:
         return None, f'<div style="color: #f87171;">Selection parser error: {str(e)}</div>', None
+
 
 def modify_selected_image(base_image, modify_prompt, strength_slider, base_prompt_input, progress=gr.Progress()):
     if base_image is None:
@@ -258,10 +271,12 @@ def modify_selected_image(base_image, modify_prompt, strength_slider, base_promp
 
     return save_path, '<div style="color: #4ade80; font-weight: bold; margin-top: 5px; text-align: center;"> Modification applied successfully!</div>'
 
+
 def reset_to_original_image(backup_path):
     if not backup_path:
         return gr.update(), '<div style="color: #fbbf24; text-align: center;">No original image frame cached. Click a gallery target first!</div>'
     return backup_path, '<div style="color: #60a5fa; text-align: center;"> Reverted back to the original layout frame.</div>'
+
 
 def append_to_favorites(target_img, custom_name, _):
     if not target_img:
@@ -281,419 +296,14 @@ def append_to_favorites(target_img, custom_name, _):
     updated_favs = load_existing_favorites()
     return updated_favs, gr.update(value=updated_favs), '<div style="color: #4ade80; font-weight: bold; margin-top: 8px; text-align: center; width: 100%;">Saved to persistent gallery!</div>'
 
+
 def set_processing_notice():
     return '<div style="text-align: center; width: 100%; font-weight: bold; color: #fbbf24; padding: 0; margin: 10px 0;"> Processing Pipeline Initiated...</div>'
+
 
 def clear_workspace_preview():
     return None
 
-GENERATOR_CSS = """
-html, body, grad-app, .gradio-container {
-    background:
-        radial-gradient(circle at 15% 50%, rgba(236, 72, 153, 0.40), transparent 50%),
-        radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.40), transparent 50%),
-        radial-gradient(circle at 50% 90%, rgba(139, 92, 246, 0.40), transparent 50%),
-        linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
-    background-attachment: fixed !important;
-    min-height: 100vh !important;
-}
-
-.gradio-container {
-    padding: 30px !important;
-}
-
-.gradio-container .progress-wrap, 
-.gradio-container div[class*="progress-wrap"],
-.gradio-container .loading,
-.gradio-container div[class*="loading-div"] {
-    background: rgba(255, 255, 255, 0.08) !important;
-    backdrop-filter: blur(16px) saturate(120%) !important;
-    -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    border-radius: 14px !important;
-    padding: 12px 20px !important;
-    box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.4) !important;
-}
-
-.gradio-container .progress-text,
-.gradio-container div[class*="progress-text"] {
-    color: #ffffff !important;
-    font-weight: 600 !important;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6) !important;
-    margin-bottom: 4px !important;
-}
-
-.gradio-container .progress-bar,
-.gradio-container div[class*="progress-bar"] {
-    background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
-    border-radius: 6px !important;
-}
-
-.gradio-container .block,
-.gradio-container .tabs,
-.gradio-container .tabitem,
-.gradio-container .group,
-.gradio-container .gr-group,
-.gradio-container div[class*="svelte-"] {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-.gradio-container .row,
-.gradio-container div[class*="row"] {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    display: flex !important;
-    align-items: stretch !important;
-}
-
-.gradio-container .column,
-.gradio-container div[class*="column"] {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    display: flex !important;
-    flex-direction: column !important;
-}
-
-.sketch-upload-wrapper {
-    margin-left: 0px !important;
-    padding-left: 10px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    justify-content: center !important;
-}
-
-.sketch-upload-wrapper .image-container {
-    border: 2px dashed rgba(255, 255, 255, 0.25) !important;
-    border-radius: 12px !important;
-    background: rgba(255, 255, 255, 0.03) !important;
-}
-
-.gradio-container input,
-.gradio-container textarea,
-.gradio-container select,
-.gradio-container div[class*="token-input"],
-.gradio-container .tabitem,
-.gradio-container fieldset,
-.gradio-container .box,
-.gradio-container div[class*="input"] {
-    background-color: rgba(255, 255, 255, 0.25) !important;
-    background: rgba(255, 255, 255, 0.25) !important;
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
-    color: #ffffff !important;
-    font-size: 1rem !important;
-    border-radius: 10px !important;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-}
-
-.gradio-container label[class*="wrapper"],
-.gradio-container .form .dark {
-    background-color: rgba(255, 255, 255, 0.14) !important;
-    background: rgba(255, 255, 255, 0.14) !important;
-    border: 1px solid rgba(255, 255, 255, 0.22) !important;
-}
-
-.gradio-container input:focus,
-.gradio-container textarea:focus {
-    border-color: rgba(236, 72, 153, 0.7) !important;
-    background-color: rgba(255, 255, 255, 0.22) !important;
-}
-
-.shortened-prompt-col {
-    max-width: 60% !important;
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-.shortened-prompt-col > div {
-    width: 100% !important;
-}
-
-.control-settings-card, .modify-panel-card {
-    background: rgba(255, 255, 255, 0.05) !important;
-    backdrop-filter: blur(24px) saturate(160%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 24px !important;
-    box-shadow: 0 30px 60px 0 rgba(0, 0, 0, 0.3) !important;
-    padding: 24px !important;
-    margin-top: 35px !important;
-    margin-bottom: 20px !important;
-    flex-grow: 1 !important;
-}
-
-.gradio-container .output-gallery-card {
-    background: rgba(255, 255, 255, 0.04) !important;
-    backdrop-filter: blur(28px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
-    border: 2px dashed rgba(255, 255, 255, 0.25) !important;
-    border-radius: 20px !important;
-    padding: 24px !important;
-    margin-top: 35px !important;
-    margin-bottom: 20px !important;
-    box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.3) !important;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
-    display: flex !important;
-    flex-direction: column !important;
-    flex-grow: 1 !important;
-    height: calc(100% - 55px) !important;
-}
-
-.gradio-container .output-gallery-card > .grid-wrap,
-.gradio-container .output-gallery-card div[class*="gallery"] {
-    flex-grow: 1 !important;
-    height: 100% !important;
-}
-
-.output-gallery-card .upload-container,
-.output-gallery-card .grid-wrap div[class*="empty"],
-.output-gallery-card div[class*="upload"] {
-    display: none !important;
-}
-
-.gradio-container .output-gallery-card .preview,
-.gradio-container .output-gallery-card div[class*="empty"] {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-.gradio-container label span,
-.gradio-container .text-sm,
-.gradio-container p,
-.gradio-container span,
-.gradio-container label,
-.gradio-container .block-title {
-    color: #ffffff !important;
-    font-weight: 600 !important;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
-}
-
-.button-row {
-    display: flex !important;
-    justify-content: center !important;
-    width: 100% !important;
-    margin-top: 15px !important;
-}
-
-.gradio-container button.primary,
-.gradio-container button[class*="primary"] {
-    background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
-    color: #ffffff !important;
-    border: none !important;
-    font-weight: 700 !important;
-    border-radius: 12px !important;
-    padding: 14px 36px !important;
-    cursor: pointer !important;
-    max-width: 260px !important;
-    width: 100% !important;
-    display: block !important;
-    margin: 20px auto 0 auto !important;
-    box-shadow: 0 8px 20px rgba(236, 72, 153, 0.4) !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-}
-
-.gradio-container button.primary:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 12px 24px rgba(236, 72, 153, 0.55) !important;
-}
-
-.apply-btn-style {
-    background: rgba(255, 255, 255, 0.15) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    color: #ffffff !important;
-    font-weight: 600 !important;
-    border-radius: 10px !important;
-    transition: all 0.2s ease !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-}
-
-.apply-btn-style:hover {
-    background: rgba(255, 255, 255, 0.25) !important;
-    border-color: rgba(236, 72, 153, 0.6) !important;
-    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3) !important;
-    transform: translateY(-1px);
-}
-
-.reset-btn-style {
-    background: rgba(255, 255, 255, 0.05) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    color: #cbd5e1 !important;
-    font-weight: 600 !important;
-    border-radius: 10px !important;
-    transition: all 0.2s ease !important;
-}
-
-.reset-btn-style:hover {
-    background: rgba(255, 255, 255, 0.12) !important;
-    color: #ffffff !important;
-    border-color: rgba(56, 189, 248, 0.5) !important;
-    box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2) !important;
-    transform: translateY(-1px);
-}
-
-#mode_radio_group {
-    background: none !important;
-    border: none !important;
-    width: 100% !important;
-}
-
-#mode_radio_group > div {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    flex-direction: row !important;
-    width: 100% !important;
-    gap: 10px !important;
-}
-
-#mode_radio_group input[type="radio"] {
-    display: none !important;
-}
-
-#mode_radio_group label {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    color: white !important;
-    border-radius: 8px !important;
-    transition: all 0.2s ease !important;
-    padding: 8px 16px !important;
-    flex: 1 1 0% !important;
-    min-width: 140px !important;
-    text-align: center !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-#mode_radio_group label.selected {
-    background: linear-gradient(135deg, #00d2ff 0%, #0066ff 100%) !important;
-    border: 1px solid #38bdf8 !important;
-    box-shadow: 0 0 15px rgba(56, 189, 248, 0.5) !important;
-    font-weight: bold !important;
-}
-
-/* --- FIXES FOR THE GALLERY PICTURE & CAPTION LAYOUT --- */
-.fav-matrix-container .grid-container,
-.fav-matrix-container div[class*="grid-container"],
-.fav-matrix-container .gallery,
-.fav-matrix-container div[class*="gallery"] {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
-    gap: 16px !important;
-    overflow: visible !important;
-}
-
-.fav-matrix-container button.thumbnail-item,
-.fav-matrix-container div[class*="thumbnail-item"],
-.fav-matrix-container .thumbnail-item {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 12px !important;
-    padding: 10px !important;
-    height: auto !important;   /* Let container height dynamically adapt to the caption */
-    min-height: 160px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-}
-
-.fav-matrix-container .thumbnail-item img,
-.fav-matrix-container img {
-    height: 100px !important;  /* Constrain layout height to accommodate text space */
-    width: 100% !important;
-    object-fit: cover !important;
-    border-radius: 8px !important;
-    display: block !important;
-}
-
-.fav-matrix-container .caption-label,
-.fav-matrix-container div[class*="caption-label"],
-.fav-matrix-container span[class*="caption"] {
-    position: relative !important;
-    display: block !important;
-    width: 100% !important;
-    font-size: 0.82em !important;
-    color: #cbd5e1 !important;
-    text-align: center !important;
-    margin-top: 8px !important;
-    padding: 0 4px !important;
-    white-space: normal !important;  /* Wraps lines perfectly underneath image */
-    word-break: break-all !important;
-    overflow: visible !important;
-}
-
-.fav-matrix-container {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 16px !important;
-    padding: 20px !important;
-    min-height: 500px !important;
-    margin-top: 35px !important;
-}
-
-.gallery-column {
-    display: flex !important;
-    flex-direction: column !important;
-}
-
-.button-row { width: 100% !important; margin-top: 10px !important; }
-.editing-buttons-row { margin-top: 25px !important; }
-.compact-number { max-width: 140px !important; width: 100% !important; }
-footer { display: none !important; }
-
-#top-controls-row {
-    gap: 35px !important;
-}
-
-/* --- ADJUSTED DROP-DOWN USER MENU PANEL STYLES --- */
-.header-navigation-row {
-    display: flex !important;
-    justify(space-between) !important;
-    align-items: center !important;
-    width: 100% !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-    margin-bottom: 25px !important;
-    padding-bottom: 10px !important;
-}
-
-#main-studio-title h1 {
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.user-menu-btn {
-    background: rgba(255, 255, 255, 0.10) !important;
-    border: 1px solid rgba(255, 255, 255, 0.20) !important;
-    color: white !important;
-    border-radius: 10px !important;
-    font-size: 0.95rem !important;
-    font-weight: 600 !important;
-    text-align: center !important;
-}
-
-.user-menu-btn input, .user-menu-btn .secondary-wrap {
-    text-align: center !important;
-    cursor: pointer !important;
-}
-
-.user-menu-btn:hover {
-    border-color: #38bdf8 !important;
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2) !important;
-}
-"""
 
 def update_ui(mode_selection):
     if mode_selection == "Sketch to Image":
@@ -702,6 +312,7 @@ def update_ui(mode_selection):
         return gr.update(visible=False), gr.update(visible=True), gr.update(interactive=True, label="Unique environmental variations")
     else:
         return gr.update(visible=False), gr.update(visible=True), gr.update(interactive=True, label="Describe the image you want to generate")
+
 
 def create_generator_ui():
     original_image_backup = gr.State(None)
@@ -774,7 +385,7 @@ def create_generator_ui():
         with gr.TabItem("Saved Gallery") as saved_gallery_tab:
             with gr.Group(elem_classes=["fav-matrix-container"]):
                 saved_gallery = gr.Gallery(
-                    value=load_existing_favorites(),
+                    value=load_existing_favorites,
                     show_label=False,
                     columns=10,
                     type="filepath",
@@ -813,56 +424,3 @@ def create_generator_ui():
         "logout_btn": logout_btn,
         "user_menu": user_menu
     }
-
-with gr.Blocks(css=GENERATOR_CSS) as demo:
-    ui = create_generator_ui()
-
-    ui["mode"].change(fn=update_ui, inputs=[ui["mode"]], outputs=[ui["sketch_inputs"], ui["count_slider"], ui["prompt"]])
-
-    ui["generate_btn"].click(
-        fn=clear_workspace_preview,
-        inputs=None,
-        outputs=[ui["selected_preview"]]
-    ).then(
-        fn=set_processing_notice,
-        inputs=None,
-        outputs=[ui["status_message"]]
-    ).then(
-        fn=generate,
-        inputs=[ui["mode"], ui["count_slider"], ui["sketch_img"], ui["prompt"]],
-        outputs=[ui["selected_preview"], ui["output_gallery"], ui["status_message"], ui["original_image_backup"]]
-    )
-
-    ui["output_gallery"].select(
-        fn=on_gallery_select,
-        inputs=[ui["output_gallery"]],
-        outputs=[ui["selected_preview"], ui["modification_status"], ui["original_image_backup"]]
-    )
-
-    ui["submit_modification_btn"].click(
-        fn=modify_selected_image,
-        inputs=[ui["selected_preview"], ui["modify_input_prompt"], ui["strength_control"], ui["prompt"]],
-        outputs=[ui["selected_preview"], ui["modification_status"]]
-    )
-
-    ui["reset_original_btn"].click(
-        fn=reset_to_original_image,
-        inputs=[ui["original_image_backup"]],
-        outputs=[ui["selected_preview"], ui["modification_status"]]
-    )
-
-    ui["save_favorite_btn"].click(
-        fn=append_to_favorites,
-        inputs=[ui["selected_preview"], ui["custom_filename_input"], ui["favorites_cache"]],
-        outputs=[ui["favorites_cache"], ui["saved_gallery"], ui["modification_status"]]
-    )
-
-    demo.load(
-        fn=None,
-        inputs=None,
-        outputs=None,
-        js="() => { document.documentElement.classList.add('dark'); }"
-    )
-
-if __name__ == "__main__":
-    demo.queue().launch()

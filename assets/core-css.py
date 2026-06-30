@@ -1,10 +1,6 @@
-import gradio as gr
-
-# ============================================================
-# Core Brand & Layout-Agnostic Theme CSS
-# ============================================================
-CONTACT_US_CSS = """
-/* 1. GLOBAL CANVAS & BACKDROP (THEME FOUNDATION) */
+/* ============================================================
+   1. GLOBAL CANVAS & BACKDROP (THEME FOUNDATION)
+============================================================ */
 html, body, grad-app, .gradio-container {
     background: 
         radial-gradient(circle at 15% 50%, rgba(236, 72, 153, 0.40), transparent 50%),
@@ -45,7 +41,9 @@ html, body, grad-app, .gradio-container {
     border: none !important;
 }
 
-/* 2. GRADIO NATIVE COMPONENT VARIABLE OVERRIDES */
+/* ============================================================
+   2. GRADIO NATIVE COMPONENT VARIABLE OVERRIDES
+============================================================ */
 :root, .gradio-container {
     --block-background-fill: rgba(0, 0, 0, 0.4) !important;
     --block-border-color: rgba(255, 255, 255, 0.15) !important;
@@ -56,7 +54,9 @@ html, body, grad-app, .gradio-container {
     --block-label-text-color: #ffffff !important;
 }
 
-/* 3. TYPOGRAPHY & TEXT ACCENTS (MAX CONTRAST) */
+/* ============================================================
+   3. TYPOGRAPHY & TEXT ACCENTS (MAX CONTRAST)
+============================================================ */
 .gradio-container h2, 
 .gradio-container .prose h2, 
 .gradio-container div[class*="markdown"] h2 {
@@ -77,7 +77,9 @@ html, body, grad-app, .gradio-container {
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* 4. FORM INPUTS & INTERACTIONS */
+/* ============================================================
+   4. FORM INPUTS & INTERACTIONS
+============================================================ */
 .gradio-container input, 
 .gradio-container textarea, 
 .gradio-container select,
@@ -102,7 +104,9 @@ input::placeholder, textarea::placeholder {
     background-color: rgba(255, 255, 255, 0.22) !important;
 }
 
-/* 5. PRIMARY INTERACTIVE BUTTON SIGNATURE */
+/* ============================================================
+   5. PRIMARY INTERACTIVE BUTTON SIGNATURE
+============================================================ */
 .gradio-container button.primary, 
 .gradio-container button[class*="primary"] {
     background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
@@ -125,57 +129,9 @@ input::placeholder, textarea::placeholder {
     box-shadow: 0 12px 24px rgba(236, 72, 153, 0.55) !important;
 }
 
-/* 6. UTILITIES (CLEANUP) */
+/* ============================================================
+   6. UTILITIES (CLEANUP)
+============================================================ */
 footer { 
     display: none !important; 
 }
-"""
-
-def create_contact_us_ui():
-    """
-    Modular UI structural component factory for the application router.
-    """
-    with gr.Column(visible=True) as contact_layout:
-        gr.Markdown("## 📬 Contact Us")
-        gr.Markdown("Have questions or feedback? Drop us a line below or reach out to us directly.")
-        
-        with gr.Row():
-            with gr.Column(scale=2):
-                contact_email = gr.Textbox(label="Your Email Address", placeholder="you@example.com")
-                contact_subject = gr.Textbox(label="Subject", placeholder="How can we help?")
-                contact_message = gr.TextArea(label="Message", placeholder="Type your message here...", lines=5)
-                send_btn = gr.Button("Submit Message", variant="primary")
-                contact_status = gr.Markdown("")
-            
-            with gr.Column(scale=1):
-                gr.Markdown("### Direct Support")
-                gr.Markdown("📧 **Email:** [contact@aimultimode.com](mailto:contact@aimultimode.com)")
-                gr.Markdown("⏱️ **Response Time:** Expect a human response within 24-48 business hours.")
-
-    return contact_layout, send_btn, contact_email, contact_subject, contact_message, contact_status
-
-
-def handle_contact_submit(email, subject, message):
-    """
-    Standard input handler for validating and routing the contact message.
-    """
-    if not email.strip() or not message.strip():
-        return "❌ Form incomplete. Please provide both your Email and Message."
-    
-    # Place your live production mailer trigger (e.g., smtplib) here
-    return "✅ Message routed successfully! Our team will get back to you shortly."
-
-
-# --- Standalone Execution Pipeline ---
-if __name__ == "__main__":
-    with gr.Blocks(css=CONTACT_US_CSS, title="Contact Test Isolation Environment") as demo:
-        # Layout unpacking mirrors app.py orchestration pipeline
-        layout, btn, email, sub, msg, status = create_contact_us_ui()
-        
-        btn.click(
-            fn=handle_contact_submit,
-            inputs=[email, sub, msg],
-            outputs=[status]
-        )
-        
-    demo.launch(share=True)

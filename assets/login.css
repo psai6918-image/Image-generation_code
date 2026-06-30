@@ -1,0 +1,281 @@
+/* ============================================================
+   1. GLOBAL CANVAS & VIBRANT BACKGROUND BACKDROP
+============================================================ */
+:root, html, body, grad-app, .gradio-container {
+    background: 
+        radial-gradient(circle at 15% 50%, rgba(236, 72, 153, 0.40), transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.40), transparent 50%),
+        radial-gradient(circle at 50% 90%, rgba(139, 92, 246, 0.40), transparent 50%),
+        linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #020617 100%) !important;
+    background-attachment: fixed !important;
+    min-height: 100vh !important;
+}
+
+.gradio-container {
+    padding: 30px !important;
+}
+
+/* Force ALL nested Gradio component rows/columns to be completely transparent */
+.gradio-container div[class*="row"], 
+.gradio-container div[class*="column"],
+.gradio-container div[class*="group"],
+.gradio-container div[class*="tabs"],
+.gradio-container .gr-row,
+.gradio-container .gr-column,
+.gradio-container div[class*="svelte-"] {
+    background-color: transparent !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Master Grid Row setup - CHANGED TO LEFT-ALIGNED (flex-start) */
+.gradio-container div[class*="row"], 
+.gradio-container .gr-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    gap: 32px !important;
+}
+
+/* Layout panel maximum boundary constraint definitions */
+.gradio-container div[class*="dark-auth-panel"],
+.gradio-container .dark-auth-panel {
+    max-width: 460px !important;
+    width: 100% !important;
+}
+
+/* ============================================================
+   2. SHADING CONTENT MODULES (DARK BLUR GLASS EFFECT)
+============================================================ */
+.gradio-container div[class*="gallery"] {
+    background: rgba(0, 0, 0, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
+    border-radius: 20px !important;
+    padding: 20px !important;
+}
+
+.gradio-container div[class*="dark-auth-panel"] div.form,
+.gradio-container .dark-auth-panel div.form,
+.gradio-container .gr-group, 
+.gradio-container div.group {
+    background: rgba(255, 255, 255, 0.04) !important; 
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.45) !important;
+    padding: 24px !important;
+}
+
+/* ============================================================
+   3. TOP GLOBAL NAVIGATION BAR (OUTERMOST TABS)
+============================================================ */
+.gradio-container > div.tabs > div.tab-nav {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 0px !important;
+    padding: 10px 20px 20px 0px !important;
+    display: flex !important;
+    gap: 30px !important;
+    margin-bottom: 25px !important;
+}
+
+.gradio-container > div.tabs > div.tab-nav > button {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: 1.5px !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0px 0px 8px 0px !important;
+    border-radius: 0px !important;
+    opacity: 0.8 !important;
+    transition: all 0.3s ease !important;
+}
+
+.gradio-container > div.tabs > div.tab-nav > button:not(.selected) {
+    color: rgba(255, 119, 51, 0.6) !important; 
+}
+
+.gradio-container > div.tabs > div.tab-nav > button:not(.selected):hover {
+    color: #ff9900 !important;
+    opacity: 1.0 !important;
+    background: transparent !important;
+}
+
+.gradio-container > div.tabs > div.tab-nav > button.selected {
+    color: rgb(255, 119, 51) !important; 
+    border-bottom: 2px solid rgb(255, 119, 51) !important;
+    opacity: 1.0 !important;
+}
+
+/* ============================================================
+   4. INNER AUTHENTICATION TABS (SIGN IN / CREATE ACCOUNT)
+============================================================ */
+#custom-auth-tabs div.tab-nav {
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 6px 6px 0 6px !important;
+    display: flex !important;
+    gap: 8px !important;
+    margin-bottom: 20px !important;
+}
+
+#custom-auth-tabs div.tab-nav button {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    border: none !important;
+    padding: 10px 20px !important;
+    border-radius: 8px 8px 0 0 !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+#custom-auth-tabs div.tab-nav button:not(.selected) {
+    color: rgba(255, 255, 255, 0.5) !important; 
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+#custom-auth-tabs div.tab-nav button:not(.selected):hover,
+#custom-auth-tabs div.tab-nav button:not(.selected):hover span {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: #ff9900 !important;
+}
+
+#custom-auth-tabs div.tab-nav button.selected {
+    color: #ffffff !important;
+    background: rgba(236, 72, 153, 0.2) !important; 
+    border-bottom: 3px solid #ec4899 !important; 
+}
+
+/* ============================================================
+   5. TEXT FIELDS & FIELD LABEL TYPOGRAPHY BOOSTS
+============================================================ */
+:root, .gradio-container {
+    --block-background-fill: rgba(0, 0, 0, 0.4) !important;
+    --block-border-color: rgba(255, 255, 255, 0.15) !important;
+    --input-background-fill: rgba(0, 0, 0, 0.5) !important;
+    --input-border-color: rgba(255, 255, 255, 0.15) !important;
+    --body-text-color: #ffffff !important;
+    --body-text-color-subdued: rgba(255, 255, 255, 0.6) !important;
+    --block-label-text-color: #ffffff !important;
+}
+
+.gradio-container h2, .gradio-container .prose h2, .gradio-container div[class*="markdown"] h2 {
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    font-size: 26px !important;
+    margin-bottom: 12px !important;
+}
+
+.gradio-container label span, .gradio-container .block-label {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+}
+
+.gradio-container div[class*="dark-auth-panel"] input,
+.gradio-container div[class*="dark-auth-panel"] textarea,
+input, textarea {
+    background: rgba(0, 0, 0, 0.5) !important; 
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    padding: 10px 14px !important;
+}
+
+input::placeholder, textarea::placeholder {
+    color: rgba(255, 255, 255, 0.35) !important;
+}
+
+/* ============================================================
+   6. CHECKBOX CLICKS & ACCENT HIGHLIGHTS
+============================================================ */
+.gradio-container input[type="checkbox"] {
+    -webkit-appearance: checkbox !important;
+    appearance: checkbox !important;
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    cursor: pointer !important;
+    accent-color: #ec4899 !important; 
+    pointer-events: auto !important;
+}
+
+.gradio-container label[class*="checkbox"],
+.gradio-container .gr-check-wrapper {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 6px 0 !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
+/* ============================================================
+   7. SUBMIT BUTTONS & SPACING OPTIMIZATIONS
+============================================================ */
+.gradio-container .dark-auth-panel button.primary,
+.gradio-container button.primary, 
+.gradio-container button[class*="primary"] {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
+    background-image: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    padding: 12px 24px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-in-out !important;
+    max-width: 220px !important; 
+    width: 100% !important;
+    margin: 15px 0 5px 0 !important;
+    display: block !important;
+}
+
+#signin_tab > div[class*="svelte-"] {
+    gap: 0px !important;
+}
+
+/* CUSTOM LINK STYLING FOR FORGOT PASSWORD BUTTON */
+.forgot-password-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #ffffff !important;
+    text-decoration: underline !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 10px 0 0 0 !important;
+    display: block !important;
+    width: fit-content !important;
+}
+.forgot-password-btn:hover {
+    color: #ff9900 !important;
+    background: transparent !important;
+}
+
+footer { display: none !important; }
+
+/* RISE-UP HOVER EFFECT FOR AUTH TABS */
+#custom-auth-tabs div.tab-nav button:not(.selected):hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45) !important;
+    border-bottom: 2px solid #ff9900 !important;
+    color: #ff9900 !important;
+    transition: all 0.25s ease !important;
+}

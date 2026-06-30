@@ -1,6 +1,17 @@
-import gradio as gr
+# pages/payment.py
+import os
 import re
 from datetime import datetime
+import gradio as gr
+
+# --- DYNAMIC CSS LOADING ---
+css_path = os.path.join("assets", "payment.css")
+if os.path.exists(css_path):
+    with open(css_path, "r", encoding="utf-8") as f:
+        PAYMENT_CSS = f.read()
+else:
+    PAYMENT_CSS = ""
+
 
 def process_payment(card_name, card_number, expiry, cvc):
     card_number = re.sub(r'\s+|-', '', card_number)
@@ -22,28 +33,25 @@ def process_payment(card_name, card_number, expiry, cvc):
         if exp_year < current_time.year or (exp_year == current_time.year and exp_month < current_time.month):
             return gr.update(value="❌ Error: The card has expired.", visible=True)
     except ValueError:
-        return gr.update(value="❌ Error: Invalid expiry date.", visible=True)
-        
-    return gr.update(value="🎉 Payment Successful! Your Premium features have been unlocked.", visible=True)
+        return gr.update(value="❌ Error: Internal parse mistake.", visible=True)
+
+    return gr.update(
+        value="<div style='color:#4ade80; font-weight:bold; font-size:1.1em;'>✅ Payment authorized successfully! Pro features unlocked.</div>", 
+        visible=True
+    )
+
 
 def create_payment_ui():
-    """Generates a perfect double-column checkout layout."""
+    """Generates the split checkout layout panels."""
     with gr.Group() as payment_container:
-        gr.Markdown("# 💳 Secure Payment Portal", elem_id="title")
-        gr.Markdown("Please review your order summary and complete your purchase securely below.")
-        
-        # Side-by-side Layout Wrapper
-        with gr.Row(elem_id="checkout-layout-row"):
+        with gr.Row():
             
-            # LEFT SIDE PANEL: Order Details
-            with gr.Column(elem_classes="summary-box", scale=1):
-                gr.Markdown("### 📦 Order Summary")
+            # LEFT SIDE PANEL: Product Details description
+            with gr.Column(elem_classes="checkout-box", scale=1):
+                gr.Markdown("### 💎 Premium Plan Activation")
                 gr.Markdown(
                     """
-                    **Product:** AI Generation Engine Premium Pass  
-                    **Billing Term:** Monthly Membership subscription  
-                    
-                    ---
+                    Unlock infinite variations, master higher resolutions, and enjoy unrestricted access to our multi-style creative studio environments.
                     
                     ### 💰 Pricing Breakdown
                     * Subtotal: **$19.99 USD** * VAT / Taxes: **$0.00 USD** **Total Amount Due:** <span style='font-size: 1.2em; color: #38bdf8;'>$19.99 USD</span>

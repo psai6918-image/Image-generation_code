@@ -1,25 +1,37 @@
+# app.py
 import gradio as gr
-from db_config import (
+
+# 1. MODULAR PAGE IMPORTS
+from pages.login import (
     create_login_ui, LOGIN_CSS, save_user, login_user,
     direct_forgot_password_trigger, commit_new_password
 )
-from sample_2_file import (
+from pages.dashboard import (
     create_generator_ui, GENERATOR_CSS, generate, on_gallery_select, 
     modify_selected_image, update_ui, set_processing_notice, 
     append_to_favorites, reset_to_original_image
 )
-from payment_file import create_payment_ui
+from pages.payment import create_payment_ui, PAYMENT_CSS
+from pages.contact_us import create_contact_us_ui, CONTACT_US_CSS, handle_contact_submit
 
-# Appending Generator CSS after Login CSS grants priority hierarchy cascading to layout rules
-COMBINED_CSS = LOGIN_CSS + "\n" + GENERATOR_CSS
+# 2. CORE DATABASE INITIALIZATION
+from config.database import init_db
+init_db()
+
+# 3. CASCADING PRESENTATION LAYERS STYLES
+COMBINED_CSS = LOGIN_CSS + "\n" + GENERATOR_CSS + "\n" + PAYMENT_CSS + "\n" + CONTACT_US_CSS
 
 with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
     
-    # --- AUTHENTICATION LAYOUT (PUBLIC) ---
+    # ==========================================
+    # VIEWPORT CONTAINERS (PUBLIC & PRIVATE LAYOUTS)
+    # ==========================================
+    
+    # --- VIEW 1: AUTHENTICATION LAYOUT (PUBLIC) ---
     with gr.Column(visible=True) as public_layout:
         auth_elements = create_login_ui()
         
-        # EXACT MATCH UNPACKING: Elements 0-19 map accurately to textboxes to ensure typing works!
+        # EXACT MATCH UNPACKING: Elements 0-19 map perfectly to underlying components
         login_user_input      = auth_elements[0]
         login_pass            = auth_elements[1]
         login_btn             = auth_elements[2]
@@ -44,44 +56,50 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
         reset_show_pass       = auth_elements[18]
         reset_save_btn        = auth_elements[19]
 
-    # --- GENERATOR UI LAYOUT (PRIVATE WORKSPACE) ---
+    # --- VIEW 2: MAIN DASHBOARD STUDIO WORKSPACE (PRIVATE) ---
     with gr.Column(visible=False) as private_layout:
         ui = create_generator_ui()
 
-    # --- PAYMENT PORTAL LAYOUT (SECURE GATEWAY) ---
+    # --- VIEW 3: SECURE PAYMENT GATEWAY PORTAL ---
     with gr.Column(visible=False) as payment_layout:
         payment_container, back_to_workspace_btn = create_payment_ui()
 
-    # --- LOG IN / REDIRECT LOGIC ---
+    # --- VIEW 4: CONTACT US SUPPORT PORTAL ---
+    with gr.Column(visible=False) as contact_layout:
+        contact_container, contact_submit_btn, c_email, c_subject, c_msg, c_status = create_contact_us_ui()
+
+
+    # ==========================================
+    # SYSTEM INTERACTION BACKEND ROUTING LOGIC
+    # ==========================================
+
+    # --- SIGN IN CONTROL ---
     def handle_login(username, password):
         msg, success = login_user(username, password)
         if success:
-            # Hide authentication layout, open the core application workspace, keep payment hidden
-            return msg, gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)
-        else:
-            return msg, gr.update(), gr.update(), gr.update()
+            return msg, gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)
+        return msg, gr.update(), gr.update(), gr.update(), gr.update()
 
     login_btn.click(
         fn=handle_login,
         inputs=[login_user_input, login_pass],
-        outputs=[login_status, public_layout, private_layout, payment_layout]
+        outputs=[login_status, public_layout, private_layout, payment_layout, contact_layout]
     )
 
-    # --- REGISTER ACCOUNTS INTERFACE BUTTONS ---
+    # --- ACCOUNT REGISTRATION CONTROL ---
     def handle_registration(username, email, password, repeat_password):
         msg, success = save_user(username, email, password, repeat_password)
         if success:
-            return msg, gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)
-        else:
-            return msg, gr.update(), gr.update(), gr.update()
+            return msg, gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)
+        return msg, gr.update(), gr.update(), gr.update(), gr.update()
 
     register_btn.click(
         fn=handle_registration,
         inputs=[reg_user, reg_email, reg_pass, reg_repeat_pass],
-        outputs=[register_status, public_layout, private_layout, payment_layout]
+        outputs=[register_status, public_layout, private_layout, payment_layout, contact_layout]
     )
 
-    # --- FORGOT/RESET PASSWORD RECOVERY HANDLERS ---
+    # --- PASSWORD RECOVERY EVENTS ---
     forgot_link_btn.click(
         fn=direct_forgot_password_trigger,
         inputs=[login_user_input], 
@@ -100,11 +118,17 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
         outputs=[auth_tabs, forgot_tab]
     )
 
-    # --- WORKSPACE GENERATION STEP ROUTING EVENTS ---
+    # --- MAIN GENERATOR CORE ENGINE EVENT HOOKS ---
+    ui["mode"].change(
+        fn=update_ui,
+        inputs=[ui["mode"]],
+        outputs=[ui["sketch_inputs"], ui["sketch_img"], ui["prompt"]]
+    )
+
     ui["generate_btn"].click(
         fn=update_ui,
-        inputs=None,
-        outputs=[ui["status_message"]]
+        inputs=[ui["mode"]],
+        outputs=[ui["sketch_inputs"], ui["sketch_img"], ui["prompt"]]
     ).then(
         fn=set_processing_notice,
         inputs=None,
@@ -139,55 +163,49 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
         outputs=[ui["favorites_cache"], ui["saved_gallery"], ui["modification_status"]]
     )
 
-    # --- DROPDOWN INTERFACE PROFILE NAVIGATOR ---
+    # --- SUPPORT PANEL EVENT ROUTING ---
+    contact_submit_btn.click(
+        fn=handle_contact_submit,
+        inputs=[c_email, c_subject, c_msg],
+        outputs=[c_status]
+    )
+
+    # --- CENTRALIZED DASHBOARD USER DROPDOWN ACTION CONTROLLER ---
     def handle_menu_navigation(choice):
         if choice == "Log out":
             return (
-                gr.update(visible=True),   # Show Authentication Layout
-                gr.update(visible=False),  # Hide Creative Workspace
-                gr.update(visible=False),  # Hide Payment Screen
+                gr.update(visible=True),   # Return to Login Layout
+                gr.update(visible=False),  # Hide Dashboard
+                gr.update(visible=False),  # Hide Checkout
+                gr.update(visible=False),  # Hide Contact Layout
                 "Profile Menu",
-                gr.update(value=""),
+                gr.update(value=""),       # Clear sign-in fields
                 gr.update(value=""),
                 '<div style="color: #4ade80; font-weight: bold; text-align: center; margin-top: 10px;">Logout successful. Session cleared!</div>'
             )
         elif choice == "Account Settings":
-            gr.Info("Account settings panel coming soon!")
-            return gr.update(), gr.update(), gr.update(), "Profile Menu", gr.update(), gr.update(), gr.update()
+            # Extra view routing placeholder (Redirects user safely to Contact support page)
+            gr.Info("Redirecting you to our contact team for configuration requests...")
+            return gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), "Profile Menu", gr.update(), gr.update(), gr.update()
         elif choice == "Payment":
-            # Switch views instantly to the payment panel
-            return (
-                gr.update(visible=False),  # Hide Authentication
-                gr.update(visible=False),  # Hide Creative Workspace
-                gr.update(visible=True),   # Show Split Column Checkout Layout
-                "Profile Menu",
-                gr.update(), gr.update(), gr.update()
-            )
+            return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), "Profile Menu", gr.update(), gr.update(), gr.update()
         
-        return gr.update(), gr.update(), gr.update(), "Profile Menu", gr.update(), gr.update(), gr.update()
+        return gr.update(), gr.update(), gr.update(), gr.update(), "Profile Menu", gr.update(), gr.update(), gr.update()
 
     ui["user_menu"].change(
         fn=handle_menu_navigation,
         inputs=[ui["user_menu"]],
-        outputs=[
-            public_layout, 
-            private_layout, 
-            payment_layout, 
-            ui["user_menu"], 
-            login_user_input, 
-            login_pass, 
-            login_status
-        ]
+        outputs=[public_layout, private_layout, payment_layout, contact_layout, ui["user_menu"], login_user_input, login_pass, login_status]
     )
 
-    # --- CHECKOUT RETURN ROUTING TRIGGER BUTTON ---
+    # --- SECURE PORTAL RETURN REDIRECT TRACKING ---
     back_to_workspace_btn.click(
-        fn=lambda: (gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)),
+        fn=lambda: (gr.update(visible=False), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)),
         inputs=None,
-        outputs=[public_layout, private_layout, payment_layout]
+        outputs=[public_layout, private_layout, payment_layout, contact_layout]
     )
     
-    # --- FORCE GLOBAL DARK MODE FOR AUTH & GENERATOR WORKSPACE ---
+    # --- FORCE INJECT DYNAMIC GLOBAL MASTER DARK GRAPHICS ENVIRONMENT ---
     demo.load(
         fn=None,
         inputs=None,
