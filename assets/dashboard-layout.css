@@ -1,6 +1,6 @@
-/* assets/dashboard.css */
+/* assets/dashboard-layout.css */
 .gradio-container {
-    padding: 30px !important;
+    padding: 12px 20px !important;
 }
 
 .gradio-container .progress-wrap, 
@@ -107,7 +107,7 @@
 }
 
 .shortened-prompt-col {
-    max-width: 60% !important;
+    max-width: 100% !important;
     width: 100% !important;
     display: flex !important;
     flex-direction: column !important;
@@ -126,10 +126,26 @@
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 24px !important;
     box-shadow: 0 30px 60px 0 rgba(0, 0, 0, 0.3) !important;
-    padding: 24px !important;
-    margin-top: 35px !important;
-    margin-bottom: 20px !important;
+    padding: 16px !important;
+    margin-top: 10px !important;
+    margin-bottom: 10px !important;
     flex-grow: 1 !important;
+}
+
+/* Master Viewport Lock Constraints */
+.workspace-row-layout {
+    height: calc(100vh - 110px) !important;
+    min-height: 520px;
+    align-items: stretch !important;
+    gap: 16px !important;
+}
+
+.gallery-column, .editing-panel-column {
+    height: 100% !important;
+}
+
+.editing-panel-column {
+    overflow-y: auto !important;
 }
 
 .gradio-container .output-gallery-card {
@@ -138,31 +154,31 @@
     -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
     border: 2px dashed rgba(255, 255, 255, 0.25) !important;
     border-radius: 20px !important;
-    padding: 24px !important;
-    margin-top: 35px !important;
-    margin-bottom: 20px !important;
+    padding: 16px !important;
+    margin-top: 10px !important;
+    margin-bottom: 10px !important;
     box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.3) !important;
     transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
     display: flex !important;
     flex-direction: column !important;
     flex-grow: 1 !important;
-    height: calc(100% - 55px) !important;
+    height: calc(100% - 20px) !important;
 }
 
 .gradio-container .output-gallery-card > .grid-wrap,
-.gradio-container .output-gallery-card div[class*="gallery"] {
+.gradio-container .output-gallery-card div[class*=\"gallery\"] {
     flex-grow: 1 !important;
     height: 100% !important;
 }
 
 .output-gallery-card .upload-container,
-.output-gallery-card .grid-wrap div[class*="empty"],
-.output-gallery-card div[class*="upload"] {
+.output-gallery-card .grid-wrap div[class*=\"empty\"],
+.output-gallery-card div[class*=\"upload\"] {
     display: none !important;
 }
 
 .gradio-container .output-gallery-card .preview,
-.gradio-container .output-gallery-card div[class*="empty"] {
+.gradio-container .output-gallery-card div[class*=\"empty\"] {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -183,22 +199,22 @@
     display: flex !important;
     justify-content: center !important;
     width: 100% !important;
-    margin-top: 15px !important;
+    margin-top: 10px !important;
 }
 
 .gradio-container button.primary,
-.gradio-container button[class*="primary"] {
+.gradio-container button[class*=\"primary\"] {
     background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
     color: #ffffff !important;
     border: none !important;
     font-weight: 700 !important;
     border-radius: 12px !important;
-    padding: 14px 36px !important;
+    padding: 12px 30px !important;
     cursor: pointer !important;
     max-width: 260px !important;
     width: 100% !important;
     display: block !important;
-    margin: 20px auto 0 auto !important;
+    margin: 12px auto 0 auto !important;
     box-shadow: 0 8px 20px rgba(236, 72, 153, 0.4) !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease !important;
 }
@@ -255,7 +271,458 @@
     flex-wrap: wrap !important;
     flex-direction: row !important;
     width: 100% !important;
-    gap: 10px !important;
+    gap: 8px !important;
+}
+
+#mode_radio_group input[type=\"radio\"] {
+    display: none !important;
+}
+
+#mode_radio_group label {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+    padding: 6px 12px !important;
+    flex: 1 1 0% !important;
+    min-width: 120px !important;
+    text-align: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#mode_radio_group label.selected {
+    background: linear-gradient(135deg, #00d2ff 0%, #0066ff 100%) !important;
+    border: 1px solid #38bdf8 !important;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.5) !important;
+    font-weight: bold !important;
+}
+
+.fav-matrix-container .grid-container,
+.fav-matrix-container div[class*=\"grid-container\"],
+.fav-matrix-container .gallery,
+.fav-matrix-container div[class*=\"gallery\"] {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 16px !important;
+    overflow: visible !important;
+}
+
+.fav-matrix-container button.thumbnail-item,
+.fav-matrix-container div[class*=\"thumbnail-item\"],
+.fav-matrix-container .thumbnail-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 12px !important;
+    padding: 10px !important;
+    height: auto !important;
+    min-height: 160px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.fav-matrix-container .thumbnail-item img,
+.fav-matrix-container img {
+    height: 100px !important;
+    width: 100% !important;
+    object-fit: cover !important;
+    border-radius: 8px !important;
+    display: block !important;
+}
+
+.fav-matrix-container .caption-label,
+.fav-matrix-container div[class*=\"caption-label\"],
+.fav-matrix-container span[class*=\"caption\"] {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    font-size: 0.82em !important;
+    color: #cbd5e1 !important;
+    text-align: center !important;
+    margin-top: 8px !important;
+    padding: 0 4px !important;
+    white-space: normal !important;
+    word-break: break-all !important;
+    overflow: visible !important;
+}
+
+.fav-matrix-container {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    min-height: 500px !important;
+    margin-top: 35px !important;
+}
+
+.gallery-column {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.button-row { width: 100% !important; margin-top: 10px !important; }
+.editing-buttons-row { margin-top: 15px !important; }
+.compact-number { max-width: 140px !important; width: 100% !important; }
+footer { display: none !important; }
+
+#top-controls-row {
+    gap: 20px !important;
+}
+
+.header-navigation-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    margin-bottom: 12px !important;
+    padding-bottom: 6px !important;
+}
+
+#main-studio-title h1 {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.user-menu-btn {
+    background: rgba(255, 255, 255, 0.10) !important;
+    border: 1px solid rgba(255, 255, 255, 0.20) !important;
+    color: white !important;
+    border-radius: 10px !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+}
+
+.user-menu-btn input, .user-menu-btn .secondary-wrap {
+    text-align: center !important;
+    cursor: pointer !important;
+}
+
+.user-menu-btn:hover {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2) !important;
+}
+
+/* Responsive Mobile Layout Adjustments */
+@media screen and (max-width: 768px) {
+    .gradio-container .row, 
+    .gradio-container div[class*=\"row\"] {
+        flex-direction: column !important;
+    }
+    
+    .gradio-container div[class*=\"column\"] {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .checkout-box, .contact-form-card {
+        padding: 16px !important;
+        margin-top: 15px !important;
+    }
+}/* assets/dashboard-layout.css */
+.gradio-container {
+    padding: 12px 20px !important;
+}
+
+.gradio-container .progress-wrap, 
+.gradio-container div[class*="progress-wrap"],
+.gradio-container .loading,
+.gradio-container div[class*="loading-div"] {
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(16px) saturate(120%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 14px !important;
+    padding: 12px 20px !important;
+    box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+.gradio-container .progress-text,
+.gradio-container div[class*="progress-text"] {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6) !important;
+    margin-bottom: 4px !important;
+}
+
+.gradio-container .progress-bar,
+.gradio-container div[class*="progress-bar"] {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
+    border-radius: 6px !important;
+}
+
+.gradio-container .block,
+.gradio-container .tabs,
+.gradio-container .tabitem,
+.gradio-container .group,
+.gradio-container .gr-group,
+.gradio-container div[class*="svelte-"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.gradio-container .row,
+.gradio-container div[class*="row"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: stretch !important;
+}
+
+.gradio-container .column,
+.gradio-container div[class*="column"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.sketch-upload-wrapper {
+    margin-left: 0px !important;
+    padding-left: 0px !important;
+    margin-top: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+}
+
+.sketch-upload-wrapper .image-container {
+    border: 2px dashed rgba(255, 255, 255, 0.25) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.gradio-container input,
+.gradio-container textarea,
+.gradio-container select,
+.gradio-container div[class*="token-input"],
+.gradio-container .tabitem,
+.gradio-container fieldset,
+.gradio-container .box,
+.gradio-container div[class*="input"] {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    background: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+    font-size: 1rem !important;
+    border-radius: 10px !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.gradio-container label[class*="wrapper"],
+.gradio-container .form .dark {
+    background-color: rgba(255, 255, 255, 0.14) !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+}
+
+.gradio-container input:focus,
+.gradio-container textarea:focus {
+    border-color: rgba(236, 72, 153, 0.7) !important;
+    background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.shortened-prompt-col {
+    max-width: 100% !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.shortened-prompt-col > div {
+    width: 100% !important;
+}
+
+.control-settings-card, .modify-panel-card {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(24px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 30px 60px 0 rgba(0, 0, 0, 0.3) !important;
+    padding: 16px !important;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
+    height: 100% !important;
+    flex-grow: 1 !important;
+}
+
+/* Master Viewport Lock Constraints */
+.workspace-row-layout {
+    height: calc(100vh - 110px) !important;
+    min-height: 520px;
+    align-items: stretch !important;
+    gap: 16px !important;
+}
+
+.gallery-column, .control-sidebar-column {
+    height: 100% !important;
+}
+
+.control-sidebar-column {
+    overflow-y: auto !important;
+}
+
+/* Inner Tab Button Adjustment to make them look distinct */
+.control-sidebar-column .tabs .tab-nav {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    margin-bottom: 12px !important;
+    display: flex !important;
+    gap: 4px !important;
+}
+
+.control-sidebar-column .tabs .tab-nav button {
+    padding: 6px 14px !important;
+    font-size: 0.9rem !important;
+    color: #cbd5e1 !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+.control-sidebar-column .tabs .tab-nav button.selected {
+    color: #ffffff !important;
+    border-bottom: 2px solid #ec4899 !important;
+    font-weight: 700 !important;
+}
+
+.gradio-container .output-gallery-card {
+    background: rgba(255, 255, 255, 0.04) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 2px dashed rgba(255, 255, 255, 0.25) !important;
+    border-radius: 20px !important;
+    padding: 16px !important;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
+    box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.3) !important;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex-grow: 1 !important;
+    height: 100% !important;
+}
+
+.gradio-container .output-gallery-card > .grid-wrap,
+.gradio-container .output-gallery-card div[class*="gallery"] {
+    flex-grow: 1 !important;
+    height: 100% !important;
+}
+
+.output-gallery-card .upload-container,
+.output-gallery-card .grid-wrap div[class*="empty"],
+.output-gallery-card div[class*="upload"] {
+    display: none !important;
+}
+
+.gradio-container .output-gallery-card .preview,
+.gradio-container .output-gallery-card div[class*="empty"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.gradio-container label span,
+.gradio-container .text-sm,
+.gradio-container p,
+.gradio-container span,
+.gradio-container label,
+.gradio-container .block-title {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+.button-row {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+}
+
+.gradio-container button.primary,
+.gradio-container button[class*="primary"] {
+    background: linear-gradient(90deg, #ec4899, #8b5cf6) !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+    padding: 12px 30px !important;
+    cursor: pointer !important;
+    max-width: 260px !important;
+    width: 100% !important;
+    display: block !important;
+    margin: 12px auto 0 auto !important;
+    box-shadow: 0 8px 20px rgba(236, 72, 153, 0.4) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.gradio-container button.primary:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 12px 24px rgba(236, 72, 153, 0.55) !important;
+}
+
+.apply-btn-style {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.apply-btn-style:hover {
+    background: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(236, 72, 153, 0.6) !important;
+    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3) !important;
+    transform: translateY(-1px);
+}
+
+.reset-btn-style {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #cbd5e1 !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+}
+
+.reset-btn-style:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+    border-color: rgba(56, 189, 248, 0.5) !important;
+    box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2) !important;
+    transform: translateY(-1px);
+}
+
+#mode_radio_group {
+    background: none !important;
+    border: none !important;
+    width: 100% !important;
+}
+
+#mode_radio_group > div {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    gap: 8px !important;
 }
 
 #mode_radio_group input[type="radio"] {
@@ -268,9 +735,9 @@
     color: white !important;
     border-radius: 8px !important;
     transition: all 0.2s ease !important;
-    padding: 8px 16px !important;
+    padding: 6px 12px !important;
     flex: 1 1 0% !important;
-    min-width: 140px !important;
+    min-width: 120px !important;
     text-align: center !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -350,12 +817,12 @@
 }
 
 .button-row { width: 100% !important; margin-top: 10px !important; }
-.editing-buttons-row { margin-top: 25px !important; }
+.editing-buttons-row { margin-top: 15px !important; }
 .compact-number { max-width: 140px !important; width: 100% !important; }
 footer { display: none !important; }
 
 #top-controls-row {
-    gap: 35px !important;
+    gap: 20px !important;
 }
 
 .header-navigation-row {
@@ -364,8 +831,8 @@ footer { display: none !important; }
     align-items: center !important;
     width: 100% !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-    margin-bottom: 25px !important;
-    padding-bottom: 10px !important;
+    margin-bottom: 12px !important;
+    padding-bottom: 6px !important;
 }
 
 #main-studio-title h1 {
@@ -395,19 +862,16 @@ footer { display: none !important; }
 
 /* Responsive Mobile Layout Adjustments */
 @media screen and (max-width: 768px) {
-    /* Force side-by-side workspace panels to stack vertically */
     .gradio-container .row, 
     .gradio-container div[class*="row"] {
         flex-direction: column !important;
     }
     
-    /* Make image galleries and preview modules utilize full viewport width */
     .gradio-container div[class*="column"] {
         width: 100% !important;
         max-width: 100% !important;
     }
     
-    /* Optimize padding constraints for tighter glass boxes */
     .checkout-box, .contact-form-card {
         padding: 16px !important;
         margin-top: 15px !important;

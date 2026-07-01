@@ -9,7 +9,8 @@ from pages.login import (
 from pages.dashboard import (
     create_generator_ui, GENERATOR_CSS, generate, on_gallery_select, 
     modify_selected_image, update_ui, set_processing_notice, 
-    append_to_favorites, reset_to_original_image, load_existing_favorites
+    append_to_favorites, reset_to_original_image, load_existing_favorites,
+    on_saved_gallery_select, rename_saved_favorite # <-- FIXED: Added required renaming callbacks
 )
 from pages.payment import create_payment_ui, PAYMENT_CSS
 from pages.contact_us import create_contact_us_ui, CONTACT_US_CSS, handle_contact_submit
@@ -219,6 +220,26 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
         inputs=[ui["user_menu"]],
         outputs=[public_layout, private_layout, payment_layout, contact_layout, ui["user_menu"], login_user_input, login_pass, login_status, session_user]
     )
+    
+    # --- SAVED GALLERY IMAGE RENAME CONTROLLER HOOKS ---
+    ui["saved_gallery"].select(
+        fn=on_saved_gallery_select,
+        inputs=[ui["saved_gallery"]],
+        outputs=[ui["rename_input_field"], ui["selected_saved_file_path"], ui["saved_gallery_status"]]
+    )
+
+    ui["submit_rename_btn"].click(
+        fn=rename_saved_favorite,
+        inputs=[ui["selected_saved_file_path"], ui["rename_input_field"], session_user],
+        outputs=[ui["saved_gallery"], ui["saved_gallery_status"]]
+    )
+    
+    # Inside your app.py controller bindings section:
+    ui["mode"].change(
+        fn=update_ui,
+        inputs=[ui["mode"]],
+        outputs=[ui["sketch_inputs"], ui["prompt"]]
+    )
 
     # --- SECURE PORTAL RETURN REDIRECT TRACKING ---
     back_to_workspace_btn.click(
@@ -237,3 +258,4 @@ with gr.Blocks(css=COMBINED_CSS, title="AI Studio Workspace") as demo:
 
 if __name__ == "__main__":
     demo.launch(share=True)
+    

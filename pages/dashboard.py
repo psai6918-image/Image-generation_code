@@ -69,7 +69,8 @@ def load_existing_favorites(username="anonymous"):
         
         file_list.sort(key=lambda x: x[0])
         for _, path, name in file_list:
-            favorites.append((path, name))
+            display_name = os.path.splitext(name)[0].replace("_", " ")
+            favorites.append((path, display_name))
             
     return favorites
 
@@ -162,7 +163,7 @@ def preprocess_sketch(pil_image):
 # --- PIPELINE ROUTING FUNCTIONS ---
 def generate(mode, count_selection, sketch_img, base_prompt, progress=gr.Progress()):
     start_dt = datetime.now()
-    warning_msg = '<div style="text-align: center; width: 100%; font-size: 1.1em; color: #fff; background: transparent; padding: 0; margin: 10px 0;"> Verify important outputs before saving.</div>'
+    warning_msg = '<div class="theme-notice">Verify important outputs before saving.</div>'
 
     if not base_prompt.strip():
         raise gr.Error("Please enter a style or content prompt!")
@@ -250,7 +251,7 @@ def on_gallery_select(evt: gr.SelectData, current_images):
         return selected_image_source, "", selected_image_source
 
     except Exception as e:
-        return None, f'<div style="color: #f87171;">Selection parser error: {str(e)}</div>', None
+        return None, f'<div class="theme-error">Selection parser error: {str(e)}</div>', None
 
 
 def modify_selected_image(base_image, modify_prompt, strength_slider, base_prompt_input, progress=gr.Progress()):
@@ -287,29 +288,34 @@ def modify_selected_image(base_image, modify_prompt, strength_slider, base_promp
         torch.cuda.empty_cache()
         gc.collect()
 
-    return save_path, '<div style="color: #4ade80; font-weight: bold; margin-top: 5px; text-align: center;"> Modification applied successfully!</div>'
+    return save_path, '<div class="theme-success">Modification applied successfully!</div>'
 
 
 def reset_to_original_image(backup_path):
     if not backup_path:
-        return gr.update(), '<div style="color: #fbbf24; text-align: center;">No original image frame cached. Click a gallery target first!</div>'
-    return backup_path, '<div style="color: #60a5fa; text-align: center;"> Reverted back to the original layout frame.</div>'
+        return gr.update(), '<div class="theme-warning">No original image frame cached. Click a gallery target first!</div>'
+    return backup_path, '<div class="theme-info">Reverted back to the original layout frame.</div>'
 
 
 def append_to_favorites(target_img, custom_name, _, username="anonymous"):
     """
-    Saves the target image directly into the explicit user profile sandbox directory.
+    Saves the target image into the explicit user profile sandbox directory.
+    Enforces that file custom names must be unique strictly inside this user's profile.
     """
     user_fav_dir = get_user_favorites_dir(username)
 
     if not target_img:
-        return load_existing_favorites(username), gr.update(), '<div style="color: #f87171; text-align: center;">Nothing to save.</div>'
+        return load_existing_favorites(username), gr.update(), '<div class="theme-error">Nothing to save.</div>'
 
     prefix = "".join(c for c in custom_name if c.isalnum() or c in (' ', '_', '-')).rstrip() if custom_name else "fav"
-    prefix = prefix.replace(" ", "_").lower() if prefix else "fav"
+    prefix = prefix.replace(" ", "_")
 
-    filename = f"{prefix}_{uuid.uuid4().hex[:4]}.png"
+    filename = f"{prefix}.png"
     save_path = os.path.join(user_fav_dir, filename)
+
+    if os.path.exists(save_path):
+        display_err_name = prefix.replace("_", " ")
+        return load_existing_favorites(username), gr.update(), f'<div class="theme-error">❌ Name already exists! "{display_err_name}" is already taken in your gallery.</div>'
 
     if isinstance(target_img, str):
         Image.open(target_img).save(save_path)
@@ -317,11 +323,56 @@ def append_to_favorites(target_img, custom_name, _, username="anonymous"):
         Image.fromarray(target_img).save(save_path)
 
     updated_favs = load_existing_favorites(username)
-    return updated_favs, gr.update(value=updated_favs), '<div style="color: #4ade80; font-weight: bold; margin-top: 8px; text-align: center; width: 100%;">Saved to persistent gallery!</div>'
+    return updated_favs, gr.update(value=updated_favs), '<div class="theme-success">Saved to persistent gallery!</div>'
+
+
+# --- SAVED GALLERY RENAME LOGIC ---
+def on_saved_gallery_select(evt: gr.SelectData, current_favorites):
+    """Triggered when an image inside the Saved Gallery is clicked."""
+    if not current_favorites or evt.index is None:
+        return "", None, ""
+    
+    try:
+        selected_item = current_favorites[evt.index]
+        file_path = selected_item[0]
+        display_name = selected_item[1]
+        
+        return display_name, file_path, f'<div class="theme-info">Selected item: "{display_name}". You can now edit its name below.</div>'
+    except Exception as e:
+        return "", None, f'<div class="theme-error">Selection error: {str(e)}</div>'
+
+
+def rename_saved_favorite(current_path, new_name, username="anonymous"):
+    """Validates uniqueness and renames the file within the user's isolated directory profile."""
+    if not current_path or not os.path.exists(current_path):
+        return load_existing_favorites(username), '<div class="theme-warning">Please select an image from your saved gallery first!</div>'
+    
+    if not new_name.strip():
+        return load_existing_favorites(username), '<div class="theme-error">New name cannot be empty!</div>'
+        
+    user_fav_dir = get_user_favorites_dir(username)
+    
+    clean_new_name = "".join(c for c in new_name if c.isalnum() or c in (' ', '_', '-')).rstrip()
+    clean_new_name = clean_new_name.replace(" ", "_")
+    
+    new_filename = f"{clean_new_name}.png"
+    new_path = os.path.join(user_fav_dir, new_filename)
+    
+    if os.path.exists(new_path) and os.path.abspath(new_path) != os.path.abspath(current_path):
+        display_err_name = clean_new_name.replace("_", " ")
+        return load_existing_favorites(username), f'<div class="theme-error">❌ Name already exists! "{display_err_name}" is already taken in your gallery.</div>'
+        
+    try:
+        os.rename(current_path, new_path)
+        updated_favs = load_existing_favorites(username)
+        display_success_name = clean_new_name.replace("_", " ")
+        return updated_favs, f'<div class="theme-success">Successfully renamed to "{display_success_name}"!</div>'
+    except Exception as e:
+        return load_existing_favorites(username), f'<div class="theme-error">System error renaming file: {str(e)}</div>'
 
 
 def set_processing_notice():
-    return '<div style="text-align: center; width: 100%; font-weight: bold; color: #fbbf24; padding: 0; margin: 10px 0;"> Processing Pipeline Initiated...</div>'
+    return '<div class="theme-notice processing-pulse">Processing Pipeline Initiated...</div>'
 
 
 def clear_workspace_preview():
@@ -329,6 +380,10 @@ def clear_workspace_preview():
 
 
 def update_ui(mode_selection):
+    """
+    Handles interactive structural UI visibility maps cleanly 
+    depending on selected generation configuration context.
+    """
     if mode_selection == "Sketch to Image":
         return gr.update(visible=True), gr.update(visible=True), gr.update(interactive=True, label="Upload your sketch and guide your sketch details")
     elif mode_selection == "Fantasy Images":
@@ -340,6 +395,7 @@ def update_ui(mode_selection):
 def create_generator_ui():
     original_image_backup = gr.State(None)
     favorites_cache = gr.State([])
+    selected_saved_file_path = gr.State(None)
     
     with gr.Row(elem_classes=["header-navigation-row"]):
         with gr.Column(scale=10):
@@ -361,58 +417,76 @@ def create_generator_ui():
     tabs = gr.Tabs()
     with tabs:
         with gr.TabItem("Studio Workspace"):
-            with gr.Row():
+            status_message = gr.HTML("")
+            with gr.Row(elem_classes=["workspace-row-layout"]):
                 with gr.Column(scale=3, elem_classes=["gallery-column"]):
                     output_gallery = gr.Gallery(show_label=False, columns=5, height="auto", type="filepath", elem_classes=["output-gallery-card"], interactive=False)
 
-                with gr.Column(scale=3):
-                    with gr.Group(visible=True, elem_classes=["modify-panel-card"]) as modify_panel:
-                        gr.Markdown("###   Workspace Editing Panel")
-                        selected_preview = gr.Image(show_label=False, type="filepath", interactive=False)
+                with gr.Column(scale=3, elem_classes=["editing-panel-column"]):
+                    with gr.Tabs() as workspace_panes:
+                        with gr.TabItem("Generation Controls"):
+                            with gr.Group(elem_classes=["control-settings-card"]):
+                                with gr.Row(elem_id="top-controls-row"):
+                                    with gr.Column(scale=3, min_width=0):
+                                        mode = gr.Radio(choices=["Text to Image", "Sketch to Image", "Fantasy Images"], value="Text to Image", label="1. Choose Your Generation Mode", interactive=True, elem_id="mode_radio_group")
+                                    with gr.Column(scale=1, min_width=140):
+                                        count_slider = gr.Number(value=1, minimum=1, maximum=100, precision=0, label="2. Style Variations", elem_classes=["compact-number"])
 
-                        modify_input_prompt = gr.Textbox(label="Prompt Modification", placeholder="Describe adjustments... e.g., 'wearing a red collar'")
-                        strength_control = gr.Number(minimum=0.10, maximum=0.90, value=0.45, label="Transformation Strength", info="Lower values retain more of the original image; higher values apply more of the new prompt's influence.")
+                                with gr.Row():
+                                    with gr.Column(elem_classes=["shortened-prompt-col"]):
+                                        scroll_notice = gr.HTML("")
+                                        prompt = gr.Textbox(value="", label="Prompt (Describe the image you want to generate)", lines=3)
+                                        generate_btn = gr.Button("Generate Image", variant="primary", elem_classes=["theme-primary-btn"])
 
-                        with gr.Row():
-                            with gr.Row(elem_classes=["editing-buttons-row"]):
-                                submit_modification_btn = gr.Button("Apply Changes", variant="secondary", size="sm", elem_classes=["apply-btn-style"])
-                                reset_original_btn = gr.Button(" Reset to Original", variant="secondary", size="sm", elem_classes=["reset-btn-style"])
-                        gr.Markdown("---")
-                        custom_filename_input = gr.Textbox(label="Save As", placeholder="e.g., cyber_dog_neon", lines=1)
-                        save_favorite_btn = gr.Button(" Save to Gallery", variant="primary", size="md")
-                        modification_status = gr.HTML("")
+                                with gr.Row(elem_classes=["sketch-upload-wrapper"]):
+                                    with gr.Group(visible=False) as sketch_inputs:
+                                        sketch_img = gr.Image(type="pil", show_label=False, sources=["upload", "clipboard"], height=250)
+                        
+                        with gr.TabItem("Workspace Editing Panel"):
+                            with gr.Group(visible=True, elem_classes=["modify-panel-card"]) as modify_panel:
+                                gr.Markdown("### Workspace Editing Panel")
+                                selected_preview = gr.Image(show_label=False, type="filepath", interactive=False, elem_classes=["preview-image-box"])
 
-            status_message = gr.HTML("")
-            
-            with gr.Group(elem_classes="control-settings-card"):
-                with gr.Row():
-                    with gr.Column(scale=2):
-                        with gr.Row(elem_id="top-controls-row"):
-                            with gr.Column(scale=3, min_width=0):
-                                mode = gr.Radio(choices=["Text to Image", "Sketch to Image", "Fantasy Images"], value="Text to Image", label="1. Choose Your Generation Mode", interactive=True, elem_id="mode_radio_group")
-                            with gr.Column(scale=1, min_width=140):
-                                count_slider = gr.Number(value=1, minimum=1, maximum=100, precision=0, label="2. Style Variations", elem_classes=["compact-number"])
-                            with gr.Column(scale=2): 
-                                pass
+                                modify_input_prompt = gr.Textbox(label="Prompt Modification", placeholder="Describe adjustments... e.g., 'wearing a red collar'")
+                                strength_control = gr.Number(minimum=0.10, maximum=0.90, value=0.45, label="Transformation Strength", info="Lower values retain more of the original image.")
 
-                        with gr.Row():
-                            with gr.Column(elem_classes=["shortened-prompt-col"]):
-                                scroll_notice = gr.HTML("")
-                                prompt = gr.Textbox(value="", label="Prompt (Describe the image you want to generate)", lines=3)
-                                generate_btn = gr.Button("Generate Image", variant="primary")
+                                with gr.Row(elem_classes=["editing-buttons-row"]):
+                                    submit_modification_btn = gr.Button("Apply Changes", variant="secondary", size="sm", elem_classes=["apply-btn-style"])
+                                    reset_original_btn = gr.Button("Reset to Original", variant="secondary", size="sm", elem_classes=["reset-btn-style"])
+                                
+                                gr.Markdown("---")
+                                custom_filename_input = gr.Textbox(label="Save As", placeholder="e.g., Apple 1", lines=1)
+                                save_favorite_btn = gr.Button("Save to Gallery", variant="primary", size="md", elem_classes=["theme-primary-btn"])
+                                modification_status = gr.HTML("")
 
-                    with gr.Column(scale=1, min_width=250, elem_classes=["sketch-upload-wrapper"]):
-                        with gr.Group(visible=False) as sketch_inputs:
-                            sketch_img = gr.Image(type="pil", show_label=False, sources=["upload", "clipboard"], height=250)
+            # --- CORE INTERACTIVE EVENT ROUTER BINDINGS ---
+            # This directly binds the mode selector radio button change event to your functional update_ui pipeline wrapper
+            mode.change(
+                fn=update_ui,
+                inputs=[mode],
+                outputs=[sketch_inputs, generate_btn, prompt]
+            )
 
         with gr.TabItem("Saved Gallery") as saved_gallery_tab:
-            with gr.Group(elem_classes=["fav-matrix-container"]):
-                saved_gallery = gr.Gallery(
-                    show_label=False,
-                    columns=10,
-                    type="filepath",
-                    height="auto"
-                )
+            with gr.Row(elem_classes=["saved-gallery-tab-layout"]):
+                with gr.Column(scale=4, elem_classes=["saved-gallery-grid-col"]):
+                    with gr.Group(elem_classes=["fav-matrix-container"]):
+                        saved_gallery = gr.Gallery(
+                            show_label=False,
+                            columns=5,
+                            type="filepath",
+                            height="auto",
+                            interactive=True,
+                            elem_classes=["saved-gallery-component"]
+                        )
+                
+                with gr.Column(scale=2, elem_classes=["saved-gallery-sidebar-col"]):
+                    with gr.Group(elem_classes=["modify-panel-card", "renaming-sidebar-card"]):
+                        gr.Markdown("### 📝 Manage Saved Image Name")
+                        saved_gallery_status = gr.HTML('<div class="sidebar-placeholder">Click an image in your gallery to edit its name.</div>')
+                        
+                        rename_input_field = gr.Textbox(label="Edit Name", placeholder="Enter new name... e.g., Apple 1")
+                        submit_rename_btn = gr.Button("💾 Rename Image", variant="secondary", size="md", elem_classes=["apply-btn-style"])
 
     return {
         "mode": mode,
@@ -434,9 +508,13 @@ def create_generator_ui():
         "modification_status": modification_status,
         "favorites_cache": favorites_cache,
         "saved_gallery": saved_gallery,
-        "saved_gallery_tab": saved_gallery_tab,  # Handled reactively by app.py mapping loops
+        "saved_gallery_tab": saved_gallery_tab,
         "account_btn": account_btn,
         "payment_btn": payment_btn,
         "logout_btn": logout_btn,
-        "user_menu": user_menu
+        "user_menu": user_menu,
+        "saved_gallery_status": saved_gallery_status,
+        "rename_input_field": rename_input_field,
+        "submit_rename_btn": submit_rename_btn,
+        "selected_saved_file_path": selected_saved_file_path
     }
